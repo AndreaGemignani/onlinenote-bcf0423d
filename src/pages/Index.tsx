@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FormattingToolbar } from "@/components/FormattingToolbar";
 
@@ -111,6 +111,20 @@ const Index = () => {
     
     return temp.textContent || '';
   };
+
+  const handleClear = useCallback(() => {
+    setTitle("");
+    if (contentRef.current) {
+      contentRef.current.innerHTML = "";
+    }
+    localStorage.removeItem("note-title");
+    localStorage.removeItem("note-content");
+    
+    toast({
+      title: "Note cleared",
+      description: "All content has been removed",
+    });
+  }, []);
 
   const handleDownload = useCallback(() => {
     const filename = title.trim() 
@@ -293,8 +307,18 @@ const Index = () => {
         </div>
       </main>
 
-      {/* Fixed Download Button */}
-      <div className="fixed bottom-6 right-6 z-20">
+      {/* Fixed Action Buttons */}
+      <div className="fixed bottom-6 right-6 z-20 flex gap-3">
+        <Button
+          onClick={handleClear}
+          size="lg"
+          variant="outline"
+          className="shadow-lg hover:shadow-xl transition-shadow rounded-full h-14 w-14 sm:h-auto sm:w-auto sm:rounded-lg border-destructive/30 hover:bg-destructive/10 hover:border-destructive"
+          title="Clear all content"
+        >
+          <Trash2 className="w-5 h-5 sm:mr-2 text-destructive" />
+          <span className="hidden sm:inline text-destructive">Clear</span>
+        </Button>
         <Button
           onClick={handleDownload}
           size="lg"
