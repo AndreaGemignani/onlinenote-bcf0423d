@@ -58,19 +58,22 @@ const Index = () => {
 
     const range = selection.getRangeAt(0);
     
+    // Get selected text if any
+    const selectedText = range.toString();
+    
     // Create checkbox element
     const checkboxContainer = document.createElement('div');
     checkboxContainer.className = 'checkbox-item flex items-start gap-2 my-1';
-    checkboxContainer.contentEditable = 'false';
+    checkboxContainer.contentEditable = 'true';
     
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.className = 'mt-1 cursor-pointer accent-accent';
+    checkbox.contentEditable = 'false';
     
     const textSpan = document.createElement('span');
-    textSpan.contentEditable = 'true';
     textSpan.className = 'flex-1 outline-none';
-    textSpan.textContent = 'New task';
+    textSpan.textContent = selectedText || 'New task';
     
     checkboxContainer.appendChild(checkbox);
     checkboxContainer.appendChild(textSpan);
@@ -171,7 +174,7 @@ const Index = () => {
     });
   }, [title]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts and special handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey) {
@@ -185,12 +188,65 @@ const Index = () => {
           e.preventDefault();
           handleFormat('italic');
         }
+        return;
+      }
+
+      // Handle Enter key inside checkbox items
+      if (e.key === "Enter" && contentRef.current?.contains(document.activeElement)) {
+        const selection = window.getSelection();
+        if (!selection || !selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
+        const container = range.commonAncestorContainer;
+        
+        // Find if we're inside a checkbox item
+        let checkboxItem = container instanceof Element 
+          ? container.closest('.checkbox-item')
+          : (container.parentElement?.closest('.checkbox-item'));
+
+        if (checkboxItem) {
+          e.preventDefault();
+          
+          // Create new checkbox item
+          const newCheckbox = document.createElement('div');
+          newCheckbox.className = 'checkbox-item flex items-start gap-2 my-1';
+          newCheckbox.contentEditable = 'true';
+          
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.className = 'mt-1 cursor-pointer accent-accent';
+          checkbox.contentEditable = 'false';
+          
+          const textSpan = document.createElement('span');
+          textSpan.className = 'flex-1 outline-none';
+          textSpan.textContent = '';
+          
+          newCheckbox.appendChild(checkbox);
+          newCheckbox.appendChild(textSpan);
+          
+          // Insert after current checkbox item
+          const nextElement = checkboxItem.nextSibling;
+          if (nextElement && nextElement.nodeName === 'BR') {
+            nextElement.parentNode?.insertBefore(newCheckbox, nextElement);
+          } else {
+            checkboxItem.parentNode?.insertBefore(newCheckbox, checkboxItem.nextSibling);
+          }
+          
+          // Focus on new text span
+          const newRange = document.createRange();
+          newRange.setStart(textSpan, 0);
+          newRange.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+          
+          handleContentChange();
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleDownload, handleFormat]);
+  }, [handleDownload, handleFormat, handleContentChange]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -262,11 +318,17 @@ const Index = () => {
           align-items: start;
           gap: 8px;
           margin: 4px 0;
+          outline: none;
         }
         
         .checkbox-item input[type="checkbox"] {
           margin-top: 4px;
           cursor: pointer;
+          pointer-events: auto;
+        }
+        
+        .checkbox-item span {
+          outline: none;
         }
         
         .checkbox-item input[type="checkbox"]:checked + span {
