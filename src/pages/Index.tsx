@@ -244,7 +244,7 @@ const Index = () => {
           
           const textSpan = document.createElement('span');
           textSpan.className = 'flex-1 outline-none';
-          textSpan.textContent = '';
+          textSpan.innerHTML = '&#8203;'; // Zero-width space to ensure cursor positioning
           textSpan.style.lineHeight = '32px';
           
           newCheckbox.appendChild(checkbox);
@@ -258,12 +258,15 @@ const Index = () => {
             checkboxItem.parentNode?.insertBefore(newCheckbox, checkboxItem.nextSibling);
           }
           
-          // Focus on new text span
-          const newRange = document.createRange();
-          newRange.setStart(textSpan, 0);
-          newRange.collapse(true);
-          selection.removeAllRanges();
-          selection.addRange(newRange);
+          // Position cursor immediately to the right of checkbox in the text span
+          setTimeout(() => {
+            const newRange = document.createRange();
+            newRange.setStart(textSpan.childNodes[0], 1);
+            newRange.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+            textSpan.focus();
+          }, 0);
           
           handleContentChange();
         }
