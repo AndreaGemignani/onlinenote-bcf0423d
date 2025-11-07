@@ -63,17 +63,23 @@ const Index = () => {
     
     // Create checkbox element
     const checkboxContainer = document.createElement('div');
-    checkboxContainer.className = 'checkbox-item flex items-start gap-2 my-1';
+    checkboxContainer.className = 'checkbox-item flex items-center gap-2';
     checkboxContainer.contentEditable = 'true';
     
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
-    checkbox.className = 'mt-1 cursor-pointer accent-accent';
+    checkbox.className = 'flex-shrink-0';
     checkbox.contentEditable = 'false';
+    checkbox.style.width = '18px';
+    checkbox.style.height = '18px';
+    checkbox.style.margin = '0';
+    checkbox.style.cursor = 'pointer';
+    checkbox.style.accentColor = 'hsl(var(--accent))';
     
     const textSpan = document.createElement('span');
     textSpan.className = 'flex-1 outline-none';
     textSpan.textContent = selectedText || 'New task';
+    textSpan.style.lineHeight = '32px';
     
     checkboxContainer.appendChild(checkbox);
     checkboxContainer.appendChild(textSpan);
@@ -223,17 +229,23 @@ const Index = () => {
           
           // Create new checkbox item
           const newCheckbox = document.createElement('div');
-          newCheckbox.className = 'checkbox-item flex items-start gap-2 my-1';
+          newCheckbox.className = 'checkbox-item flex items-center gap-2';
           newCheckbox.contentEditable = 'true';
           
           const checkbox = document.createElement('input');
           checkbox.type = 'checkbox';
-          checkbox.className = 'mt-1 cursor-pointer accent-accent';
+          checkbox.className = 'flex-shrink-0';
           checkbox.contentEditable = 'false';
+          checkbox.style.width = '18px';
+          checkbox.style.height = '18px';
+          checkbox.style.margin = '0';
+          checkbox.style.cursor = 'pointer';
+          checkbox.style.accentColor = 'hsl(var(--accent))';
           
           const textSpan = document.createElement('span');
           textSpan.className = 'flex-1 outline-none';
           textSpan.textContent = '';
+          textSpan.style.lineHeight = '32px';
           
           newCheckbox.appendChild(checkbox);
           newCheckbox.appendChild(textSpan);
@@ -279,13 +291,34 @@ const Index = () => {
       <FormattingToolbar 
         onFormat={handleFormat}
         onInsertCheckbox={handleInsertCheckbox}
+        onDownload={handleDownload}
+        onClear={handleClear}
       />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
-        <div className="space-y-6">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
+        {/* Notebook Background with Ruled Lines */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {/* Left Margin Line */}
+          <div className="absolute left-4 sm:left-6 lg:left-8 top-0 bottom-0 w-px bg-accent/20" />
+          
+          {/* Right Margin Line */}
+          <div className="absolute right-4 sm:right-6 lg:right-8 top-0 bottom-0 w-px bg-accent/20" />
+          
+          {/* Horizontal Ruled Lines */}
+          <div 
+            className="absolute inset-0" 
+            style={{
+              backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, hsl(var(--border)) 31px, hsl(var(--border)) 32px)',
+              backgroundSize: '100% 32px',
+              backgroundPosition: '0 8px'
+            }}
+          />
+        </div>
+
+        <div className="space-y-6 relative z-10">
           {/* Title Input */}
-          <div>
+          <div className="pl-8 sm:pl-10 lg:pl-12">
             <Input
               type="text"
               placeholder="Untitled note"
@@ -300,35 +333,15 @@ const Index = () => {
             ref={contentRef}
             contentEditable
             onInput={handleContentChange}
-            className="min-h-[60vh] text-base sm:text-lg leading-relaxed border-none bg-transparent px-0 outline-none"
-            style={{ whiteSpace: 'pre-wrap' }}
+            className="min-h-[60vh] text-base sm:text-lg leading-8 border-none bg-transparent pl-8 sm:pl-10 lg:pl-12 pr-8 sm:pr-10 lg:pr-12 outline-none"
+            style={{ 
+              whiteSpace: 'pre-wrap',
+              lineHeight: '32px'
+            }}
             data-placeholder="Start writing..."
           />
         </div>
       </main>
-
-      {/* Fixed Action Buttons */}
-      <div className="fixed bottom-6 right-6 z-20 flex gap-3">
-        <Button
-          onClick={handleClear}
-          size="lg"
-          variant="outline"
-          className="shadow-lg hover:shadow-xl transition-shadow rounded-full h-14 w-14 sm:h-auto sm:w-auto sm:rounded-lg border-destructive/30 hover:bg-destructive/10 hover:border-destructive"
-          title="Clear all content"
-        >
-          <Trash2 className="w-5 h-5 sm:mr-2 text-destructive" />
-          <span className="hidden sm:inline text-destructive">Clear</span>
-        </Button>
-        <Button
-          onClick={handleDownload}
-          size="lg"
-          className="shadow-lg hover:shadow-xl transition-shadow bg-accent hover:bg-accent/90 text-accent-foreground rounded-full h-14 w-14 sm:h-auto sm:w-auto sm:rounded-lg"
-          title="Download note (Ctrl/Cmd + S)"
-        >
-          <Download className="w-5 h-5 sm:mr-2" />
-          <span className="hidden sm:inline">Download</span>
-        </Button>
-      </div>
 
       <style>{`
         [contenteditable]:empty:before {
@@ -339,20 +352,27 @@ const Index = () => {
         
         .checkbox-item {
           display: flex;
-          align-items: start;
+          align-items: center;
           gap: 8px;
-          margin: 4px 0;
+          line-height: 32px;
+          min-height: 32px;
           outline: none;
         }
         
         .checkbox-item input[type="checkbox"] {
-          margin-top: 4px;
+          flex-shrink: 0;
+          width: 18px;
+          height: 18px;
+          margin: 0;
           cursor: pointer;
           pointer-events: auto;
+          accent-color: hsl(var(--accent));
         }
         
         .checkbox-item span {
+          flex: 1;
           outline: none;
+          line-height: 32px;
         }
         
         .checkbox-item input[type="checkbox"]:checked + span {

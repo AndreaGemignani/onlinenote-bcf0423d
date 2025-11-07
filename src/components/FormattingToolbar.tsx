@@ -4,7 +4,9 @@ import {
   Italic, 
   Highlighter, 
   CheckSquare,
-  Type
+  Type,
+  Download,
+  Trash2
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -16,11 +18,13 @@ import {
 interface FormattingToolbarProps {
   onFormat: (command: string, value?: string) => void;
   onInsertCheckbox: () => void;
+  onDownload: () => void;
+  onClear: () => void;
 }
 
-export const FormattingToolbar = ({ onFormat, onInsertCheckbox }: FormattingToolbarProps) => {
+export const FormattingToolbar = ({ onFormat, onInsertCheckbox, onDownload, onClear }: FormattingToolbarProps) => {
   return (
-    <div className="flex items-center gap-1 p-2 border-b border-border bg-card/50 backdrop-blur-sm sticky top-[73px] z-10">
+    <div className="flex items-center justify-between gap-3 p-2 border-b border-border bg-card/50 backdrop-blur-sm sticky top-[73px] z-10">
       <div className="flex items-center gap-1 flex-wrap">
         {/* Font Size Selector */}
         <DropdownMenu>
@@ -93,6 +97,29 @@ export const FormattingToolbar = ({ onFormat, onInsertCheckbox }: FormattingTool
           title="Insert checkbox"
         >
           <CheckSquare className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={onClear}
+          size="sm"
+          variant="outline"
+          className="h-8 border-destructive/30 hover:bg-destructive/10 hover:border-destructive"
+          title="Clear all content"
+        >
+          <Trash2 className="w-4 h-4 sm:mr-1.5 text-destructive" />
+          <span className="hidden sm:inline text-destructive text-sm">Clear</span>
+        </Button>
+        <Button
+          onClick={onDownload}
+          size="sm"
+          className="h-8 bg-accent hover:bg-accent/90 text-accent-foreground"
+          title="Download note (Ctrl/Cmd + S)"
+        >
+          <Download className="w-4 h-4 sm:mr-1.5" />
+          <span className="hidden sm:inline text-sm">Download</span>
         </Button>
       </div>
     </div>
