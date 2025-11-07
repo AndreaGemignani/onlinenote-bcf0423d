@@ -6,7 +6,8 @@ import {
   CheckSquare,
   Type,
   Download,
-  Trash2
+  Trash2,
+  Upload
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -20,9 +21,10 @@ interface FormattingToolbarProps {
   onInsertCheckbox: () => void;
   onDownload: () => void;
   onClear: () => void;
+  onOpenFile: () => void;
 }
 
-export const FormattingToolbar = ({ onFormat, onInsertCheckbox, onDownload, onClear }: FormattingToolbarProps) => {
+export const FormattingToolbar = ({ onFormat, onInsertCheckbox, onDownload, onClear, onOpenFile }: FormattingToolbarProps) => {
   return (
     <div className="flex items-center justify-between gap-3 p-2 border-b border-border bg-card/50 backdrop-blur-sm sticky top-[73px] z-10">
       <div className="flex items-center gap-1 flex-wrap">
@@ -102,6 +104,16 @@ export const FormattingToolbar = ({ onFormat, onInsertCheckbox, onDownload, onCl
 
       {/* Action Buttons */}
       <div className="flex items-center gap-2">
+        <Button
+          onClick={onOpenFile}
+          size="sm"
+          variant="outline"
+          className="h-8"
+          title="Open saved note"
+        >
+          <Upload className="w-4 h-4 sm:mr-1.5" />
+          <span className="hidden sm:inline text-sm">Open</span>
+        </Button>
         <Button
           onClick={onClear}
           size="sm"

@@ -8,6 +8,7 @@ import { FormattingToolbar } from "@/components/FormattingToolbar";
 const Index = () => {
   const [title, setTitle] = useState("");
   const contentRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -132,49 +133,259 @@ const Index = () => {
     });
   }, []);
 
+  const handleOpenFile = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileLoad = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const htmlContent = e.target?.result as string;
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlContent, 'text/html');
+      
+      // Extract title from the saved file
+      const savedTitle = doc.getElementById('note-title')?.textContent || '';
+      setTitle(savedTitle);
+      
+      // Extract content from the saved file
+      const savedContent = doc.getElementById('note-content')?.innerHTML || '';
+      if (contentRef.current) {
+        contentRef.current.innerHTML = savedContent;
+      }
+      
+      // Save to localStorage
+      localStorage.setItem('note-title', savedTitle);
+      localStorage.setItem('note-content', savedContent);
+      
+      toast({
+        title: "Note loaded",
+        description: "Your note has been loaded successfully",
+      });
+    };
+    
+    reader.readAsText(file);
+    // Reset the input so the same file can be loaded again
+    event.target.value = '';
+  }, []);
+
   const handleDownload = useCallback(() => {
     const filename = title.trim() 
       ? `${sanitizeFilename(title)}.html`
       : "note.html";
     
     const content = contentRef.current?.innerHTML || '';
-    const plainTextFilename = title.trim() 
-      ? `${sanitizeFilename(title)}.txt`
-      : "note.txt";
     
-    // Create HTML file with embedded styles
+    // Create self-contained HTML webapp
     const htmlContent = `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${title || 'Note'}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title || 'QuickNote'}</title>
   <style>
-    body {
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
       font-family: system-ui, -apple-system, sans-serif;
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 20px;
-      line-height: 1.6;
-      color: #1a1a1a;
+      background: #fafafa;
+      min-height: 100vh;
     }
-    h1 {
-      margin-bottom: 20px;
-      font-size: 2em;
+    .header {
+      border-bottom: 1px solid #e5e7eb;
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(8px);
+      padding: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header-content {
+      max-width: 896px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .title { font-size: 18px; font-weight: 600; }
+    .privacy-note {
+      margin-left: auto;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .main {
+      max-width: 896px;
+      margin: 0 auto;
+      padding: 32px 16px;
+      position: relative;
+    }
+    .background-lines {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .margin-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: rgba(147, 51, 234, 0.2);
+    }
+    .margin-line.left { left: 16px; }
+    .margin-line.right { right: 16px; }
+    .ruled-lines {
+      position: absolute;
+      inset: 0;
+      background-image: repeating-linear-gradient(transparent, transparent 31px, #e5e7eb 31px, #e5e7eb 32px);
+      background-size: 100% 32px;
+      background-position: 0 8px;
+    }
+    .content {
+      position: relative;
+      z-index: 1;
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+    .note-title {
+      font-size: 24px;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      width: 100%;
+      padding: 8px 0;
+      outline: none;
+      margin-bottom: 24px;
+    }
+    .note-content {
+      min-height: 60vh;
+      font-size: 16px;
+      line-height: 32px;
+      border: none;
+      background: transparent;
+      outline: none;
+      white-space: pre-wrap;
     }
     .checkbox-item {
       display: flex;
-      align-items: start;
+      align-items: center;
       gap: 8px;
-      margin: 4px 0;
+      line-height: 32px;
+      min-height: 32px;
     }
     .checkbox-item input[type="checkbox"] {
-      margin-top: 4px;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #9333ea;
+    }
+    .checkbox-item input[type="checkbox"]:checked + span {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+    [contenteditable]:empty:before {
+      content: attr(data-placeholder);
+      color: rgba(0, 0, 0, 0.4);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <h1>${title || 'Untitled Note'}</h1>
-  <div>${content}</div>
+  <header class="header">
+    <div class="header-content">
+      <span class="title">📝 QuickNote</span>
+      <div class="privacy-note">🔒 Stored locally on your device</div>
+    </div>
+  </header>
+  
+  <main class="main">
+    <div class="background-lines">
+      <div class="margin-line left"></div>
+      <div class="margin-line right"></div>
+      <div class="ruled-lines"></div>
+    </div>
+    
+    <div class="content">
+      <input 
+        type="text" 
+        id="note-title"
+        class="note-title" 
+        placeholder="Untitled note"
+        value="${title || ''}"
+      />
+      <div 
+        id="note-content"
+        class="note-content" 
+        contenteditable="true"
+        data-placeholder="Start writing..."
+      >${content}</div>
+    </div>
+  </main>
+  
+  <script>
+    // Auto-save to localStorage
+    const titleInput = document.getElementById('note-title');
+    const contentDiv = document.getElementById('note-content');
+    
+    titleInput.addEventListener('input', () => {
+      localStorage.setItem('quicknote-title', titleInput.value);
+    });
+    
+    contentDiv.addEventListener('input', () => {
+      localStorage.setItem('quicknote-content', contentDiv.innerHTML);
+    });
+    
+    // Load from localStorage on open
+    const savedTitle = localStorage.getItem('quicknote-title');
+    const savedContent = localStorage.getItem('quicknote-content');
+    if (savedTitle) titleInput.value = savedTitle;
+    if (savedContent) contentDiv.innerHTML = savedContent;
+    
+    // Handle checkbox creation on Enter
+    contentDiv.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const selection = window.getSelection();
+        if (!selection || !selection.rangeCount) return;
+        
+        const range = selection.getRangeAt(0);
+        const container = range.commonAncestorContainer;
+        const checkboxItem = container instanceof Element 
+          ? container.closest('.checkbox-item')
+          : container.parentElement?.closest('.checkbox-item');
+        
+        if (checkboxItem) {
+          e.preventDefault();
+          
+          const newCheckbox = document.createElement('div');
+          newCheckbox.className = 'checkbox-item';
+          newCheckbox.contentEditable = 'true';
+          
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.contentEditable = 'false';
+          
+          const textSpan = document.createElement('span');
+          textSpan.innerHTML = '&#8203;';
+          
+          newCheckbox.appendChild(checkbox);
+          newCheckbox.appendChild(textSpan);
+          
+          checkboxItem.parentNode.insertBefore(newCheckbox, checkboxItem.nextSibling);
+          
+          setTimeout(() => {
+            const newRange = document.createRange();
+            newRange.setStart(textSpan.childNodes[0], 1);
+            newRange.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+            textSpan.focus();
+          }, 0);
+        }
+      }
+    });
+  </script>
 </body>
 </html>`;
 
@@ -190,7 +401,7 @@ const Index = () => {
 
     toast({
       title: "Note downloaded",
-      description: `Saved as ${filename}`,
+      description: `Saved as ${filename} - opens as editable webapp`,
     });
   }, [title]);
 
@@ -285,10 +496,19 @@ const Index = () => {
           <FileText className="w-6 h-6 text-accent" />
           <h1 className="text-lg font-semibold text-foreground">QuickNote</h1>
           <div className="ml-auto text-xs text-muted-foreground hidden sm:block">
-            Auto-saving...
+            🔒 Stored locally on your device
           </div>
         </div>
       </header>
+
+      {/* Hidden file input for opening files */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".html"
+        onChange={handleFileLoad}
+        className="hidden"
+      />
 
       {/* Formatting Toolbar */}
       <FormattingToolbar 
@@ -296,6 +516,7 @@ const Index = () => {
         onInsertCheckbox={handleInsertCheckbox}
         onDownload={handleDownload}
         onClear={handleClear}
+        onOpenFile={handleOpenFile}
       />
 
       {/* Main Content */}
