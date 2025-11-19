@@ -7,7 +7,8 @@ import {
   Type,
   Download,
   Trash2,
-  Upload
+  Upload,
+  Save
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -20,11 +21,14 @@ interface FormattingToolbarProps {
   onFormat: (command: string, value?: string) => void;
   onInsertCheckbox: () => void;
   onDownload: () => void;
+  onSave: () => void;
   onClear: () => void;
   onOpenFile: () => void;
+  hasOpenFile: boolean;
+  currentFilename: string;
 }
 
-export const FormattingToolbar = ({ onFormat, onInsertCheckbox, onDownload, onClear, onOpenFile }: FormattingToolbarProps) => {
+export const FormattingToolbar = ({ onFormat, onInsertCheckbox, onDownload, onSave, onClear, onOpenFile, hasOpenFile, currentFilename }: FormattingToolbarProps) => {
   return (
     <div className="flex items-center justify-between gap-3 p-2 border-b border-border bg-card/50 backdrop-blur-sm sticky top-[73px] z-10">
       <div className="flex items-center gap-1 flex-wrap">
@@ -114,6 +118,18 @@ export const FormattingToolbar = ({ onFormat, onInsertCheckbox, onDownload, onCl
           <Upload className="w-4 h-4 sm:mr-1.5" />
           <span className="hidden sm:inline text-sm">Open</span>
         </Button>
+        {hasOpenFile && (
+          <Button
+            onClick={onSave}
+            size="sm"
+            variant="outline"
+            className="h-8"
+            title="Save changes to current file"
+          >
+            <Save className="w-4 h-4 sm:mr-1.5" />
+            <span className="hidden sm:inline text-sm">Save</span>
+          </Button>
+        )}
         <Button
           onClick={onClear}
           size="sm"
@@ -134,6 +150,11 @@ export const FormattingToolbar = ({ onFormat, onInsertCheckbox, onDownload, onCl
           <span className="hidden sm:inline text-sm">Download</span>
         </Button>
       </div>
+      {currentFilename && (
+        <div className="absolute -bottom-5 right-4 text-xs text-muted-foreground">
+          Editing: {currentFilename}
+        </div>
+      )}
     </div>
   );
 };
