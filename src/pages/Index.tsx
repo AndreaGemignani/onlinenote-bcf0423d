@@ -786,29 +786,28 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {/* Fixed Top Toolbar */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-card/95 backdrop-blur-sm shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Main toolbar row */}
-          <div className="flex items-center justify-between gap-2 py-2">
-            {/* Left: Logo and formatting tools */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 pr-3 border-r border-border">
-                <FileText className="w-5 h-5 text-accent" />
-                <h1 className="text-base font-semibold text-foreground hidden sm:block">QuickNote</h1>
-              </div>
-              <FormattingToolbar 
-                onFormat={handleFormat}
-                onInsertCheckbox={handleInsertCheckbox}
-                onDownload={handleDownload}
-                onSave={handleSave}
-                onClear={handleClear}
-                onOpenFile={handleOpenFile}
-                hasOpenFile={!!fileHandle}
-                currentFilename={currentFilename}
-              />
-            </div>
+        <div className="flex items-center py-2 px-4">
+          {/* Logo on far left */}
+          <div className="flex items-center gap-2 pr-4 border-r border-border mr-4">
+            <FileText className="w-5 h-5 text-accent" />
+            <h1 className="text-base font-semibold text-foreground hidden sm:block">QuickNote</h1>
+          </div>
+          
+          {/* Toolbar */}
+          <div className="flex-1 overflow-x-auto">
+            <FormattingToolbar 
+              onFormat={handleFormat}
+              onInsertCheckbox={handleInsertCheckbox}
+              onDownload={handleDownload}
+              onSave={handleSave}
+              onClear={handleClear}
+              onOpenFile={handleOpenFile}
+              hasOpenFile={!!fileHandle}
+              currentFilename={currentFilename}
+            />
           </div>
           {currentFilename && (
-            <div className="pb-1 -mt-1 text-xs text-muted-foreground truncate">
+            <div className="text-xs text-muted-foreground truncate ml-auto">
               Editing: {currentFilename}
             </div>
           )}
