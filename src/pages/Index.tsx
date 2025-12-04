@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Download, FileText, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { FormattingToolbar } from "@/components/FormattingToolbar";
-
 const Index = () => {
   const [title, setTitle] = useState("");
   const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
@@ -16,7 +15,6 @@ const Index = () => {
   useEffect(() => {
     const savedTitle = localStorage.getItem("note-title");
     const savedContent = localStorage.getItem("note-content");
-    
     if (savedTitle) setTitle(savedTitle);
     if (savedContent && contentRef.current) {
       contentRef.current.innerHTML = savedContent;
@@ -30,45 +28,33 @@ const Index = () => {
       localStorage.setItem("note-content", content);
     }
   }, []);
-
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       localStorage.setItem("note-title", title);
     }, 500);
-
     return () => clearTimeout(timeoutId);
   }, [title]);
-
   const sanitizeFilename = (filename: string): string => {
-    return filename
-      .replace(/[^a-z0-9]/gi, "_")
-      .replace(/_+/g, "_")
-      .replace(/^_|_$/g, "")
-      .toLowerCase();
+    return filename.replace(/[^a-z0-9]/gi, "_").replace(/_+/g, "_").replace(/^_|_$/g, "").toLowerCase();
   };
-
   const handleFormat = useCallback((command: string, value?: string) => {
     document.execCommand(command, false, value);
     contentRef.current?.focus();
     handleContentChange();
   }, [handleContentChange]);
-
   const handleInsertCheckbox = useCallback(() => {
     if (!contentRef.current) return;
-
     const selection = window.getSelection();
     if (!selection || !selection.rangeCount) return;
-
     const range = selection.getRangeAt(0);
-    
+
     // Get selected text if any
     const selectedText = range.toString();
-    
+
     // Create checkbox element
     const checkboxContainer = document.createElement('div');
     checkboxContainer.className = 'checkbox-item flex items-center gap-2';
     checkboxContainer.contentEditable = 'true';
-    
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.className = 'flex-shrink-0';
@@ -78,36 +64,32 @@ const Index = () => {
     checkbox.style.margin = '0';
     checkbox.style.cursor = 'pointer';
     checkbox.style.accentColor = 'hsl(var(--accent))';
-    
     const textSpan = document.createElement('span');
     textSpan.className = 'flex-1 outline-none';
     textSpan.textContent = selectedText || 'New task';
     textSpan.style.lineHeight = '32px';
-    
     checkboxContainer.appendChild(checkbox);
     checkboxContainer.appendChild(textSpan);
-    
+
     // Insert at cursor position
     range.deleteContents();
     range.insertNode(checkboxContainer);
-    
+
     // Add line break after
     const br = document.createElement('br');
     checkboxContainer.parentNode?.insertBefore(br, checkboxContainer.nextSibling);
-    
+
     // Focus on the text span
     const newRange = document.createRange();
     newRange.selectNodeContents(textSpan);
     selection.removeAllRanges();
     selection.addRange(newRange);
-    
     handleContentChange();
   }, [handleContentChange]);
-
   const htmlToPlainText = (html: string): string => {
     const temp = document.createElement('div');
     temp.innerHTML = html;
-    
+
     // Convert checkboxes to text
     const checkboxItems = temp.querySelectorAll('.checkbox-item');
     checkboxItems.forEach(item => {
@@ -117,10 +99,8 @@ const Index = () => {
       const textNode = document.createTextNode(`${checkmark} ${text}\n`);
       item.parentNode?.replaceChild(textNode, item);
     });
-    
     return temp.textContent || '';
   };
-
   const handleClear = useCallback(() => {
     setTitle("");
     if (contentRef.current) {
@@ -128,17 +108,15 @@ const Index = () => {
     }
     localStorage.removeItem("note-title");
     localStorage.removeItem("note-content");
-    
+
     // Clear file handle and filename
     setFileHandle(null);
     setCurrentFilename("");
-    
     toast({
       title: "Note cleared",
-      description: "All content has been removed",
+      description: "All content has been removed"
     });
   }, []);
-
   const handleOpenFile = useCallback(async () => {
     // Try to use File System Access API first
     if ('showOpenFilePicker' in window) {
@@ -146,36 +124,35 @@ const Index = () => {
         const [handle] = await (window as any).showOpenFilePicker({
           types: [{
             description: 'HTML Files',
-            accept: { 'text/html': ['.html'] }
+            accept: {
+              'text/html': ['.html']
+            }
           }],
           multiple: false
         });
-        
         const file = await handle.getFile();
         const htmlContent = await file.text();
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlContent, 'text/html');
-        
+
         // Extract title and content
         const savedTitle = doc.getElementById('note-title')?.getAttribute('value') || '';
         const savedContent = doc.getElementById('note-content')?.innerHTML || '';
-        
         setTitle(savedTitle);
         if (contentRef.current) {
           contentRef.current.innerHTML = savedContent;
         }
-        
+
         // Save to localStorage
         localStorage.setItem('note-title', savedTitle);
         localStorage.setItem('note-content', savedContent);
-        
+
         // Store file handle and filename
         setFileHandle(handle);
         setCurrentFilename(file.name);
-        
         toast({
           title: "Note loaded",
-          description: `Opened ${file.name}`,
+          description: `Opened ${file.name}`
         });
       } catch (err: any) {
         if (err.name !== 'AbortError') {
@@ -192,51 +169,45 @@ const Index = () => {
       fileInputRef.current?.click();
     }
   }, []);
-
   const handleFileLoad = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = e => {
       const htmlContent = e.target?.result as string;
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlContent, 'text/html');
-      
+
       // Extract title from the saved file
       const savedTitle = doc.getElementById('note-title')?.getAttribute('value') || '';
       setTitle(savedTitle);
-      
+
       // Extract content from the saved file
       const savedContent = doc.getElementById('note-content')?.innerHTML || '';
       if (contentRef.current) {
         contentRef.current.innerHTML = savedContent;
       }
-      
+
       // Save to localStorage
       localStorage.setItem('note-title', savedTitle);
       localStorage.setItem('note-content', savedContent);
-      
+
       // Store filename (no file handle in fallback mode)
       setCurrentFilename(file.name);
-      
       toast({
         title: "Note loaded",
-        description: `Opened ${file.name}`,
+        description: `Opened ${file.name}`
       });
     };
-    
     reader.readAsText(file);
     // Reset the input so the same file can be loaded again
     event.target.value = '';
   }, []);
-
   const handleSave = useCallback(async () => {
     if (!fileHandle) return;
-
     try {
       const content = contentRef.current?.innerHTML || '';
-      
+
       // Create the HTML content
       const htmlContent = `<!DOCTYPE html>
 <html lang="en">
@@ -451,10 +422,9 @@ const Index = () => {
       const writable = await fileHandle.createWritable();
       await writable.write(htmlContent);
       await writable.close();
-
       toast({
         title: "Saved!",
-        description: `Changes saved to ${currentFilename}`,
+        description: `Changes saved to ${currentFilename}`
       });
     } catch (err) {
       console.error('Error saving file:', err);
@@ -465,14 +435,10 @@ const Index = () => {
       });
     }
   }, [fileHandle, title, currentFilename]);
-
   const handleDownload = useCallback(() => {
-    const filename = title.trim() 
-      ? `${sanitizeFilename(title)}.html`
-      : "note.html";
-    
+    const filename = title.trim() ? `${sanitizeFilename(title)}.html` : "note.html";
     const content = contentRef.current?.innerHTML || '';
-    
+
     // Create self-contained HTML webapp
     const htmlContent = `<!DOCTYPE html>
 <html lang="en">
@@ -682,8 +648,9 @@ const Index = () => {
   </script>
 </body>
 </html>`;
-
-    const blob = new Blob([htmlContent], { type: "text/html" });
+    const blob = new Blob([htmlContent], {
+      type: "text/html"
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -692,10 +659,9 @@ const Index = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-
     toast({
       title: "Note downloaded",
-      description: `Saved as ${filename} - opens as editable webapp`,
+      description: `Saved as ${filename} - opens as editable webapp`
     });
   }, [title]);
 
@@ -720,23 +686,18 @@ const Index = () => {
       if (e.key === "Enter" && contentRef.current?.contains(document.activeElement)) {
         const selection = window.getSelection();
         if (!selection || !selection.rangeCount) return;
-
         const range = selection.getRangeAt(0);
         const container = range.commonAncestorContainer;
-        
-        // Find if we're inside a checkbox item
-        let checkboxItem = container instanceof Element 
-          ? container.closest('.checkbox-item')
-          : (container.parentElement?.closest('.checkbox-item'));
 
+        // Find if we're inside a checkbox item
+        let checkboxItem = container instanceof Element ? container.closest('.checkbox-item') : container.parentElement?.closest('.checkbox-item');
         if (checkboxItem) {
           e.preventDefault();
-          
+
           // Create new checkbox item
           const newCheckbox = document.createElement('div');
           newCheckbox.className = 'checkbox-item flex items-center gap-2';
           newCheckbox.contentEditable = 'true';
-          
           const checkbox = document.createElement('input');
           checkbox.type = 'checkbox';
           checkbox.className = 'flex-shrink-0';
@@ -746,15 +707,13 @@ const Index = () => {
           checkbox.style.margin = '0';
           checkbox.style.cursor = 'pointer';
           checkbox.style.accentColor = 'hsl(var(--accent))';
-          
           const textSpan = document.createElement('span');
           textSpan.className = 'flex-1 outline-none';
           textSpan.innerHTML = '&#8203;'; // Zero-width space to ensure cursor positioning
           textSpan.style.lineHeight = '32px';
-          
           newCheckbox.appendChild(checkbox);
           newCheckbox.appendChild(textSpan);
-          
+
           // Insert after current checkbox item
           const nextElement = checkboxItem.nextSibling;
           if (nextElement && nextElement.nodeName === 'BR') {
@@ -762,7 +721,7 @@ const Index = () => {
           } else {
             checkboxItem.parentNode?.insertBefore(newCheckbox, checkboxItem.nextSibling);
           }
-          
+
           // Position cursor immediately to the right of checkbox in the text span
           setTimeout(() => {
             const newRange = document.createRange();
@@ -772,56 +731,35 @@ const Index = () => {
             selection.addRange(newRange);
             textSpan.focus();
           }, 0);
-          
           handleContentChange();
         }
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleDownload, handleFormat, handleContentChange]);
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Fixed Top Toolbar */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-card/95 backdrop-blur-sm shadow-sm">
         <div className="flex items-center py-2 px-4">
           {/* Logo on far left */}
           <div className="flex items-center gap-2 pr-4 border-r border-border mr-4">
             <FileText className="w-5 h-5 text-accent" />
-            <h1 className="text-base font-semibold text-foreground hidden sm:block">QuickNote</h1>
+            <h1 className="text-base font-semibold text-foreground hidden sm:block">GemiNote</h1>
           </div>
           
           {/* Toolbar */}
           <div className="flex-1 overflow-x-auto">
-            <FormattingToolbar 
-              onFormat={handleFormat}
-              onInsertCheckbox={handleInsertCheckbox}
-              onDownload={handleDownload}
-              onSave={handleSave}
-              onClear={handleClear}
-              onOpenFile={handleOpenFile}
-              hasOpenFile={!!fileHandle}
-              currentFilename={currentFilename}
-            />
+            <FormattingToolbar onFormat={handleFormat} onInsertCheckbox={handleInsertCheckbox} onDownload={handleDownload} onSave={handleSave} onClear={handleClear} onOpenFile={handleOpenFile} hasOpenFile={!!fileHandle} currentFilename={currentFilename} />
           </div>
-          {currentFilename && (
-            <div className="text-xs text-muted-foreground truncate ml-auto">
+          {currentFilename && <div className="text-xs text-muted-foreground truncate ml-auto">
               Editing: {currentFilename}
-            </div>
-          )}
+            </div>}
         </div>
       </header>
 
       {/* Hidden file input for opening files */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".html"
-        onChange={handleFileLoad}
-        className="hidden"
-      />
+      <input ref={fileInputRef} type="file" accept=".html" onChange={handleFileLoad} className="hidden" />
 
       {/* Main Content with padding for fixed header */}
       <main className="max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20 relative min-h-screen">
@@ -834,40 +772,24 @@ const Index = () => {
           <div className="absolute right-4 sm:right-6 lg:right-8 top-0 bottom-0 w-px bg-accent/20" />
           
           {/* Horizontal Ruled Lines */}
-          <div 
-            className="absolute inset-0" 
-            style={{
-              backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, hsl(var(--border)) 31px, hsl(var(--border)) 32px)',
-              backgroundSize: '100% 32px',
-              backgroundPosition: '0 8px'
-            }}
-          />
+          <div className="absolute inset-0" style={{
+          backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, hsl(var(--border)) 31px, hsl(var(--border)) 32px)',
+          backgroundSize: '100% 32px',
+          backgroundPosition: '0 8px'
+        }} />
         </div>
 
         <div className="space-y-6 relative z-10">
           {/* Title Input */}
           <div className="pl-8 sm:pl-10 lg:pl-12">
-            <Input
-              type="text"
-              placeholder="Untitled note"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="text-2xl sm:text-3xl font-semibold border-none bg-transparent px-0 focus-visible:ring-0 placeholder:text-muted-foreground/40"
-            />
+            <Input type="text" placeholder="Untitled note" value={title} onChange={e => setTitle(e.target.value)} className="text-2xl sm:text-3xl font-semibold border-none bg-transparent px-0 focus-visible:ring-0 placeholder:text-muted-foreground/40" />
           </div>
 
           {/* Content Editor */}
-          <div
-            ref={contentRef}
-            contentEditable
-            onInput={handleContentChange}
-            className="min-h-[60vh] text-base sm:text-lg leading-8 border-none bg-transparent pl-8 sm:pl-10 lg:pl-12 pr-8 sm:pr-10 lg:pr-12 outline-none"
-            style={{ 
-              whiteSpace: 'pre-wrap',
-              lineHeight: '32px'
-            }}
-            data-placeholder="Start writing..."
-          />
+          <div ref={contentRef} contentEditable onInput={handleContentChange} className="min-h-[60vh] text-base sm:text-lg leading-8 border-none bg-transparent pl-8 sm:pl-10 lg:pl-12 pr-8 sm:pr-10 lg:pr-12 outline-none" style={{
+          whiteSpace: 'pre-wrap',
+          lineHeight: '32px'
+        }} data-placeholder="Start writing..." />
         </div>
       </main>
 
@@ -908,8 +830,6 @@ const Index = () => {
           opacity: 0.6;
         }
       `}</style>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
