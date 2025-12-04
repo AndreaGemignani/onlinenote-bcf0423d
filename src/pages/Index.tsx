@@ -783,15 +783,35 @@ const Index = () => {
   }, [handleDownload, handleFormat, handleContentChange]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-3">
-          <FileText className="w-6 h-6 text-accent" />
-          <h1 className="text-lg font-semibold text-foreground">QuickNote</h1>
-          <div className="ml-auto text-xs text-muted-foreground hidden sm:block">
-            🔒 Stored locally on your device
+    <div className="min-h-screen bg-background">
+      {/* Fixed Top Toolbar */}
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-card/95 backdrop-blur-sm shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Main toolbar row */}
+          <div className="flex items-center justify-between gap-2 py-2">
+            {/* Left: Logo and formatting tools */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 pr-3 border-r border-border">
+                <FileText className="w-5 h-5 text-accent" />
+                <h1 className="text-base font-semibold text-foreground hidden sm:block">QuickNote</h1>
+              </div>
+              <FormattingToolbar 
+                onFormat={handleFormat}
+                onInsertCheckbox={handleInsertCheckbox}
+                onDownload={handleDownload}
+                onSave={handleSave}
+                onClear={handleClear}
+                onOpenFile={handleOpenFile}
+                hasOpenFile={!!fileHandle}
+                currentFilename={currentFilename}
+              />
+            </div>
           </div>
+          {currentFilename && (
+            <div className="pb-1 -mt-1 text-xs text-muted-foreground truncate">
+              Editing: {currentFilename}
+            </div>
+          )}
         </div>
       </header>
 
@@ -804,20 +824,8 @@ const Index = () => {
         className="hidden"
       />
 
-      {/* Formatting Toolbar */}
-      <FormattingToolbar 
-        onFormat={handleFormat}
-        onInsertCheckbox={handleInsertCheckbox}
-        onDownload={handleDownload}
-        onSave={handleSave}
-        onClear={handleClear}
-        onOpenFile={handleOpenFile}
-        hasOpenFile={!!fileHandle}
-        currentFilename={currentFilename}
-      />
-
-      {/* Main Content */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
+      {/* Main Content with padding for fixed header */}
+      <main className="max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20 relative min-h-screen">
         {/* Notebook Background with Ruled Lines */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           {/* Left Margin Line */}
