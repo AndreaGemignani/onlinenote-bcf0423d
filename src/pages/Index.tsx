@@ -18,16 +18,35 @@ const Index = () => {
     if (savedTitle) setTitle(savedTitle);
     if (savedContent && contentRef.current) {
       contentRef.current.innerHTML = savedContent;
+      // Restore checkbox states from checked attribute
+      const checkboxes = contentRef.current.querySelectorAll('.checkbox-item input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
+      checkboxes.forEach(cb => {
+        cb.checked = cb.hasAttribute('checked');
+      });
     }
+  }, []);
+
+  // Helper to sync checkbox checked attributes before save
+  const syncCheckboxAttributes = useCallback(() => {
+    if (!contentRef.current) return;
+    const checkboxes = contentRef.current.querySelectorAll('.checkbox-item input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
+    checkboxes.forEach(cb => {
+      if (cb.checked) {
+        cb.setAttribute('checked', 'checked');
+      } else {
+        cb.removeAttribute('checked');
+      }
+    });
   }, []);
 
   // Auto-save to localStorage
   const handleContentChange = useCallback(() => {
     if (contentRef.current) {
+      syncCheckboxAttributes();
       const content = contentRef.current.innerHTML;
       localStorage.setItem("note-content", content);
     }
-  }, []);
+  }, [syncCheckboxAttributes]);
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       localStorage.setItem("note-title", title);
@@ -141,6 +160,11 @@ const Index = () => {
         setTitle(savedTitle);
         if (contentRef.current) {
           contentRef.current.innerHTML = savedContent;
+          // Restore checkbox states from checked attribute
+          const checkboxes = contentRef.current.querySelectorAll('.checkbox-item input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
+          checkboxes.forEach(cb => {
+            cb.checked = cb.hasAttribute('checked');
+          });
         }
 
         // Save to localStorage
@@ -186,6 +210,11 @@ const Index = () => {
       const savedContent = doc.getElementById('note-content')?.innerHTML || '';
       if (contentRef.current) {
         contentRef.current.innerHTML = savedContent;
+        // Restore checkbox states from checked attribute
+        const checkboxes = contentRef.current.querySelectorAll('.checkbox-item input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
+        checkboxes.forEach(cb => {
+          cb.checked = cb.hasAttribute('checked');
+        });
       }
 
       // Save to localStorage
@@ -206,6 +235,7 @@ const Index = () => {
   const handleSave = useCallback(async () => {
     if (!fileHandle) return;
     try {
+      syncCheckboxAttributes();
       const content = contentRef.current?.innerHTML || '';
 
       // Create the HTML content
@@ -434,9 +464,10 @@ const Index = () => {
         variant: "destructive"
       });
     }
-  }, [fileHandle, title, currentFilename]);
+  }, [fileHandle, title, currentFilename, syncCheckboxAttributes]);
   const handleDownload = useCallback(() => {
     const filename = title.trim() ? `${sanitizeFilename(title)}.html` : "note.html";
+    syncCheckboxAttributes();
     const content = contentRef.current?.innerHTML || '';
 
     // Create self-contained HTML webapp
@@ -663,7 +694,7 @@ const Index = () => {
       title: "Note downloaded",
       description: `Saved as ${filename} - opens as editable webapp`
     });
-  }, [title]);
+  }, [title, syncCheckboxAttributes]);
 
   // Keyboard shortcuts and special handling
   useEffect(() => {
