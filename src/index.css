@@ -11,6 +11,14 @@ All colors MUST be HSL.
     --background: 36 33% 97%;
     --foreground: 30 10% 15%;
 
+    /* Notebook (paper) tokens */
+    --paper: 42 45% 95%;
+    --paper-grid: 30 25% 80%;
+    --paper-grid-strong: 30 30% 70%;
+    --margin-line: 0 65% 60%;
+    --ink: 220 40% 18%;
+    --ink-muted: 220 15% 45%;
+
     --card: 0 0% 100%;
     --card-foreground: 30 10% 15%;
 
@@ -37,13 +45,22 @@ All colors MUST be HSL.
     --ring: 28 80% 60%;
 
     --radius: 0.75rem;
+    --grid: 28px;
 
     --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .dark {
-    --background: 30 15% 8%;
-    --foreground: 36 20% 95%;
+    --background: 220 30% 8%;
+    --foreground: 210 30% 92%;
+
+    /* Notebook (blueprint) tokens */
+    --paper: 220 35% 11%;
+    --paper-grid: 215 25% 22%;
+    --paper-grid-strong: 210 35% 35%;
+    --margin-line: 0 65% 55%;
+    --ink: 210 30% 92%;
+    --ink-muted: 215 15% 65%;
 
     --card: 30 12% 12%;
     --card-foreground: 36 20% 95%;
@@ -88,3 +105,117 @@ All colors MUST be HSL.
     @apply transition-all duration-200;
   }
 }
+
+/* ===== Notebook editor ===== */
+@layer components {
+  .notebook-paper {
+    background-color: hsl(var(--paper));
+    background-image:
+      linear-gradient(to right, hsl(var(--paper-grid) / 0.6) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--paper-grid) / 0.6) 1px, transparent 1px);
+    background-size: var(--grid) var(--grid);
+    background-position: 0 0;
+  }
+
+  .notebook-margin {
+    position: relative;
+  }
+  .notebook-margin::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--grid) * 3 - 1px);
+    width: 1px;
+    background: hsl(var(--margin-line) / 0.45);
+    pointer-events: none;
+  }
+}
+
+/* Tiptap / ProseMirror styling — aligned to --grid */
+.ProseMirror {
+  outline: none;
+  color: hsl(var(--ink));
+  font-family: 'Caveat', 'Kalam', 'Patrick Hand', system-ui, sans-serif;
+  font-size: 20px;
+  line-height: var(--grid);
+  min-height: calc(var(--grid) * 20);
+}
+.ProseMirror > * {
+  margin: 0;
+  line-height: var(--grid);
+}
+.ProseMirror p {
+  min-height: var(--grid);
+}
+.ProseMirror p:empty::before {
+  content: "\00a0";
+}
+.ProseMirror h1 {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: calc(var(--grid) * 2);
+  min-height: calc(var(--grid) * 2);
+}
+.ProseMirror h2 {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: calc(var(--grid) * 1.5);
+  min-height: calc(var(--grid) * 1.5);
+}
+.ProseMirror ul, .ProseMirror ol {
+  padding-left: calc(var(--grid) * 1.2);
+}
+.ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+.ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: var(--grid);
+}
+.ProseMirror ul[data-type="taskList"] li > label {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  height: var(--grid);
+  user-select: none;
+}
+.ProseMirror ul[data-type="taskList"] li > div {
+  flex: 1;
+  min-width: 0;
+}
+.ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: hsl(var(--accent));
+  margin: 0;
+}
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+.ProseMirror mark {
+  background: hsl(48 95% 70% / 0.7);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+.dark .ProseMirror mark {
+  background: hsl(48 95% 55% / 0.45);
+}
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: hsl(var(--ink-muted));
+  pointer-events: none;
+  height: 0;
+}
+
+/* Font-size marks */
+.ProseMirror [data-font-size="small"] { font-size: 16px; }
+.ProseMirror [data-font-size="medium"] { font-size: 20px; }
+.ProseMirror [data-font-size="large"] { font-size: 26px; }
