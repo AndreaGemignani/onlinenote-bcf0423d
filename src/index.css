@@ -15,7 +15,6 @@ All colors MUST be HSL.
     --paper: 42 45% 95%;
     --paper-grid: 30 25% 80%;
     --paper-grid-strong: 30 30% 70%;
-    --margin-line: 0 65% 60%;
     --ink: 220 40% 18%;
     --ink-muted: 220 15% 45%;
 
@@ -58,7 +57,6 @@ All colors MUST be HSL.
     --paper: 220 35% 11%;
     --paper-grid: 215 25% 22%;
     --paper-grid-strong: 210 35% 35%;
-    --margin-line: 0 65% 55%;
     --ink: 210 30% 92%;
     --ink-muted: 215 15% 65%;
 
@@ -116,20 +114,6 @@ All colors MUST be HSL.
     background-size: var(--grid) var(--grid);
     background-position: 0 0;
   }
-
-  .notebook-margin {
-    position: relative;
-  }
-  .notebook-margin::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: calc(var(--grid) * 3 - 1px);
-    width: 1px;
-    background: hsl(var(--margin-line) / 0.45);
-    pointer-events: none;
-  }
 }
 
 /* Tiptap / ProseMirror styling — aligned to --grid */
@@ -165,6 +149,15 @@ All colors MUST be HSL.
 }
 .ProseMirror ul, .ProseMirror ol {
   padding-left: calc(var(--grid) * 1.2);
+}
+.ProseMirror ul:not([data-type="taskList"]) {
+  list-style: disc;
+}
+.ProseMirror ol {
+  list-style: decimal;
+}
+.ProseMirror li {
+  line-height: var(--grid);
 }
 .ProseMirror ul[data-type="taskList"] {
   list-style: none;
