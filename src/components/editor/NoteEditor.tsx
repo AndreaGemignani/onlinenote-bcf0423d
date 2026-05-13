@@ -57,7 +57,7 @@ export function NoteEditor({ noteId, initialContent, onChange, onEditorReady }: 
   }, [noteId, initialContent, editor]);
 
   return (
-    <div className="notebook-paper notebook-margin rounded-lg shadow-[0_10px_30px_-12px_hsl(220_30%_20%/0.25)]">
+    <div className="notebook-paper rounded-lg shadow-[0_10px_30px_-12px_hsl(220_30%_20%/0.25)]">
       <div
         className="px-[calc(var(--grid)*2)] py-[calc(var(--grid))]"
         style={{ minHeight: "calc(100vh - 220px)" }}
