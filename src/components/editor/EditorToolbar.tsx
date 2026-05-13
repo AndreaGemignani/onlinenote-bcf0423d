@@ -137,33 +137,42 @@ export function EditorToolbar({ editor, onOpen, onDownload, onClear }: Props) {
 
       <div className="w-px h-5 bg-border mx-1" />
 
-      <Button
-        variant="ghost"
-        size="sm"
-        className={btn(editor.isActive("bulletList"))}
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-        title="Elenco puntato"
-      >
-        <List className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className={btn(editor.isActive("orderedList"))}
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        title="Elenco numerato"
-      >
-        <ListOrdered className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        className={btn(editor.isActive("taskList"))}
-        onClick={() => editor.chain().focus().toggleTaskList().run()}
-        title="Checklist"
-      >
-        <ListChecks className="h-4 w-4" />
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={btn(
+              editor.isActive("bulletList") ||
+                editor.isActive("orderedList") ||
+                editor.isActive("taskList")
+            )}
+            title="Elenchi"
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="bg-popover z-50">
+          <DropdownMenuItem
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+          >
+            <List className="h-4 w-4 mr-2" />
+            Elenco puntato
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          >
+            <ListOrdered className="h-4 w-4 mr-2" />
+            Elenco numerato
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+          >
+            <ListChecks className="h-4 w-4 mr-2" />
+            Checklist
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <div className="flex-1" />
 
