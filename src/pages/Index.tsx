@@ -113,69 +113,73 @@ const Index = () => {
   }, [handleDownload]);
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar
-          notes={notes}
-          activeId={activeId}
-          onSelect={setActiveId}
-          onCreate={() => createNote()}
-          onDelete={deleteNote}
-          theme={theme}
-          onToggleTheme={toggle}
-        />
-
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Top bar */}
-          <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-md">
-            <div className="flex items-center gap-2 px-3 h-12">
-              <SidebarTrigger />
-              <div className="w-px h-5 bg-border mx-1" />
-              {activeNote && editor && (
-                <EditorToolbar
-                  editor={editor}
-                  onOpen={handleOpen}
-                  onDownload={handleDownload}
-                  onClear={handleClear}
-                />
-              )}
-            </div>
-          </header>
-
-          {/* Content */}
-          <main className="flex-1 overflow-auto">
-            <div className="max-w-4xl mx-auto px-4 py-8">
-              <input
-                type="text"
-                value={titleDraft}
-                onChange={(e) => setTitleDraft(e.target.value)}
-                placeholder="Titolo della nota..."
-                className="w-full bg-transparent border-none outline-none text-3xl font-bold mb-6 placeholder:text-muted-foreground"
+    <div className="min-h-screen flex w-full bg-background">
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top bar */}
+        <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-md">
+          <div className="flex items-center gap-2 px-3 h-12">
+            <NotesMenu
+              notes={notes}
+              activeId={activeId}
+              onSelect={setActiveId}
+              onCreate={() => createNote()}
+              onDelete={deleteNote}
+              onTogglePin={togglePin}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={toggle}
+              title={theme === "dark" ? "Passa a chiaro" : "Passa a scuro"}
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+            <div className="w-px h-5 bg-border mx-1" />
+            {activeNote && editor && (
+              <EditorToolbar
+                editor={editor}
+                onOpen={handleOpen}
+                onDownload={handleDownload}
+                onClear={handleClear}
               />
-              {activeNote && (
-                <NoteEditor
-                  noteId={activeNote.id}
-                  initialContent={activeNote.contentJSON}
-                  onChange={handleEditorChange}
-                  onEditorReady={setEditor}
-                />
-              )}
-              <p className="text-center text-xs text-muted-foreground mt-6">
-                🔒 Tutte le note sono salvate localmente sul tuo dispositivo
-              </p>
-            </div>
-          </main>
-        </div>
+            )}
+          </div>
+        </header>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".html,.json"
-          onChange={handleFileChange}
-          className="hidden"
-        />
+        {/* Content */}
+        <main className="flex-1 overflow-auto">
+          <div className="max-w-4xl mx-auto px-4 py-8">
+            <input
+              type="text"
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              placeholder="Titolo della nota..."
+              className="w-full bg-transparent border-none outline-none text-3xl font-bold mb-6 placeholder:text-muted-foreground"
+            />
+            {activeNote && (
+              <NoteEditor
+                noteId={activeNote.id}
+                initialContent={activeNote.contentJSON}
+                onChange={handleEditorChange}
+                onEditorReady={setEditor}
+              />
+            )}
+            <p className="text-center text-xs text-muted-foreground mt-6">
+              🔒 Tutte le note sono salvate localmente sul tuo dispositivo
+            </p>
+          </div>
+        </main>
       </div>
-    </SidebarProvider>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".html,.json"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+    </div>
   );
 };
 
