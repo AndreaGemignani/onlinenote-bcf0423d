@@ -123,8 +123,25 @@ export function useNotes() {
     updateNote(activeId, { title: "", contentJSON: emptyDoc(), preview: "" });
   }, [activeId, updateNote]);
 
+  const togglePin = useCallback((id: string) => {
+    setNotes((arr) =>
+      arr.map((n) => (n.id === id ? { ...n, pinned: !n.pinned } : n))
+    );
+  }, []);
+
+  const sortedNotes = useMemo(
+    () =>
+      [...notes].sort((a, b) => {
+        const p = Number(!!b.pinned) - Number(!!a.pinned);
+        if (p !== 0) return p;
+        return b.updatedAt - a.updatedAt;
+      }),
+    [notes]
+  );
+
   return {
-    notes,
+    notes: sortedNotes,
+    togglePin,
     activeNote,
     activeId,
     setActiveId,
