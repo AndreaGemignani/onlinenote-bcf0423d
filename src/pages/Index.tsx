@@ -21,6 +21,7 @@ const Index = () => {
     updateNote,
     deleteNote,
     clearActive,
+    togglePin,
   } = useNotes();
   const { theme, toggle } = useTheme();
 
