@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Editor } from "@tiptap/react";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
+import { NotesMenu } from "@/components/NotesMenu";
+import { Button } from "@/components/ui/button";
+import { Sun, Moon } from "lucide-react";
 import { NoteEditor } from "@/components/editor/NoteEditor";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { useNotes } from "@/hooks/useNotes";
