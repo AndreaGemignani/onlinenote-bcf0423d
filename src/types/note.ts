@@ -5,4 +5,5 @@ export interface Note {
   preview: string;
   createdAt: number;
   updatedAt: number;
+  pinned?: boolean;
 }
