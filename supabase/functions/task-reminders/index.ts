@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { tg, escapeHtml } from "../_shared/telegram.ts";
+import { tg, escapeHtml, webhookSecret } from "../_shared/telegram.ts";
 
 function localParts(tz: string) {
   const fmt = new Intl.DateTimeFormat("en-CA", {
@@ -21,6 +21,20 @@ function localParts(tz: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  // One-time (idempotent) registration of the Telegram webhook.
+  if (new URL(req.url).searchParams.get("setup") === "1") {
+    const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/telegram-webhook`;
+    const result = await tg("setWebhook", {
+      url,
+      secret_token: await webhookSecret(),
+      allowed_updates: ["message", "edited_message", "callback_query"],
+    });
+    const info = await tg("getWebhookInfo", {});
+    return new Response(JSON.stringify({ ok: true, result, info }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
