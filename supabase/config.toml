@@ -1,1 +1,10 @@
 project_id = "kroehaedpanrvorkjfic"
+
+[functions.telegram-webhook]
+verify_jwt = false
+
+[functions.tasks-api]
+verify_jwt = false
+
+[functions.task-reminders]
+verify_jwt = false
