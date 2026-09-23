@@ -14,7 +14,130 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      daily_tasks: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          due_time: string | null
+          id: string
+          owner_id: string
+          position: number
+          reminded_at: string | null
+          task_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          due_time?: string | null
+          id?: string
+          owner_id: string
+          position?: number
+          reminded_at?: string | null
+          task_date: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          due_time?: string | null
+          id?: string
+          owner_id?: string
+          position?: number
+          reminded_at?: string | null
+          task_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_tasks_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "task_owners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_owners: {
+        Row: {
+          created_at: string
+          id: string
+          pair_code: string
+          telegram_chat_id: number | null
+          telegram_username: string | null
+          timezone: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pair_code: string
+          telegram_chat_id?: number | null
+          telegram_username?: string | null
+          timezone?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pair_code?: string
+          telegram_chat_id?: number | null
+          telegram_username?: string | null
+          timezone?: string
+        }
+        Relationships: []
+      }
+      telegram_prompts: {
+        Row: {
+          answered: boolean
+          chat_id: number
+          created_at: string
+          id: string
+          task_id: string
+        }
+        Insert: {
+          answered?: boolean
+          chat_id: number
+          created_at?: string
+          id?: string
+          task_id: string
+        }
+        Update: {
+          answered?: boolean
+          chat_id?: number
+          created_at?: string
+          id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_prompts_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "daily_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_updates: {
+        Row: {
+          created_at: string
+          update_id: number
+        }
+        Insert: {
+          created_at?: string
+          update_id: number
+        }
+        Update: {
+          created_at?: string
+          update_id?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
