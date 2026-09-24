@@ -146,6 +146,20 @@ const Index = () => {
             <Button
               variant="ghost"
               size="sm"
+              className="h-8 px-2 relative"
+              onClick={() => setTasksOpen(true)}
+              title="Attività giornaliere"
+            >
+              <CalendarDays className="h-4 w-4" />
+              {pendingToday > 0 && (
+                <span className="ml-1 text-[10px] font-semibold rounded-full bg-accent/25 px-1.5 py-0.5">
+                  {pendingToday}
+                </span>
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               className="h-8 w-8 p-0"
               onClick={toggle}
               title={theme === "dark" ? "Passa a chiaro" : "Passa a scuro"}
