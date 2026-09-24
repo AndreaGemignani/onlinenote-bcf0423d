@@ -33,6 +33,20 @@ const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const latestHTML = useRef<string>("");
 
+  // Tasks / calendar
+  const [tasksOpen, setTasksOpen] = useState(false);
+  const [monthCursor, setMonthCursor] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
+  const [selectedDate, setSelectedDate] = useState(() => dateKey(new Date()));
+  const tasksApi = useTasks(monthCursor, true);
+  const todayKey = dateKey(new Date());
+  const pendingToday = tasksApi.tasks.filter(
+    (t) => t.task_date === todayKey && !t.completed
+  ).length;
+
+
   // Sync title input when active note changes
   useEffect(() => {
     setTitleDraft(activeNote?.title ?? "");
