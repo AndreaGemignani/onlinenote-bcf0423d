@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Editor } from "@tiptap/react";
 import { NotesMenu } from "@/components/NotesMenu";
 import { Button } from "@/components/ui/button";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, CalendarDays } from "lucide-react";
+import { TasksCalendarDialog } from "@/components/tasks/TasksCalendarDialog";
+import { useTasks } from "@/hooks/useTasks";
+import { dateKey } from "@/lib/dateKey";
 import { NoteEditor } from "@/components/editor/NoteEditor";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { useNotes } from "@/hooks/useNotes";
@@ -29,6 +32,20 @@ const Index = () => {
   const [titleDraft, setTitleDraft] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const latestHTML = useRef<string>("");
+
+  // Tasks / calendar
+  const [tasksOpen, setTasksOpen] = useState(false);
+  const [monthCursor, setMonthCursor] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
+  const [selectedDate, setSelectedDate] = useState(() => dateKey(new Date()));
+  const tasksApi = useTasks(monthCursor, true);
+  const todayKey = dateKey(new Date());
+  const pendingToday = tasksApi.tasks.filter(
+    (t) => t.task_date === todayKey && !t.completed
+  ).length;
+
 
   // Sync title input when active note changes
   useEffect(() => {
@@ -129,6 +146,20 @@ const Index = () => {
             <Button
               variant="ghost"
               size="sm"
+              className="h-8 px-2 relative"
+              onClick={() => setTasksOpen(true)}
+              title="Attività giornaliere"
+            >
+              <CalendarDays className="h-4 w-4" />
+              {pendingToday > 0 && (
+                <span className="ml-1 text-[10px] font-semibold rounded-full bg-accent/25 px-1.5 py-0.5">
+                  {pendingToday}
+                </span>
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               className="h-8 w-8 p-0"
               onClick={toggle}
               title={theme === "dark" ? "Passa a chiaro" : "Passa a scuro"}
@@ -178,6 +209,23 @@ const Index = () => {
         accept=".html,.json"
         onChange={handleFileChange}
         className="hidden"
+      />
+
+      <TasksCalendarDialog
+        open={tasksOpen}
+        onOpenChange={setTasksOpen}
+        monthCursor={monthCursor}
+        setMonthCursor={setMonthCursor}
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        owner={tasksApi.owner}
+        tasks={tasksApi.tasks}
+        createTask={tasksApi.createTask}
+        setCompleted={tasksApi.setCompleted}
+        deleteTask={tasksApi.deleteTask}
+        sendRecap={tasksApi.sendRecap}
+        refreshOwner={tasksApi.refreshOwner}
+        unlinkTelegram={tasksApi.unlinkTelegram}
       />
     </div>
   );
