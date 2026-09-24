@@ -210,6 +210,23 @@ const Index = () => {
         onChange={handleFileChange}
         className="hidden"
       />
+
+      <TasksCalendarDialog
+        open={tasksOpen}
+        onOpenChange={setTasksOpen}
+        monthCursor={monthCursor}
+        setMonthCursor={setMonthCursor}
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        owner={tasksApi.owner}
+        tasks={tasksApi.tasks}
+        createTask={tasksApi.createTask}
+        setCompleted={tasksApi.setCompleted}
+        deleteTask={tasksApi.deleteTask}
+        sendRecap={tasksApi.sendRecap}
+        refreshOwner={tasksApi.refreshOwner}
+        unlinkTelegram={tasksApi.unlinkTelegram}
+      />
     </div>
   );
 };
