@@ -4,4 +4,4 @@
 - [x] Interfaccia calendario mensile con attività giornaliere
 - [x] Collegamento Telegram dall'app (pair code / deep link)
 - [x] Invio riepilogo giornaliero a Telegram
-- [ ] Promemoria automatici: richiede uno scheduler che chiami `task-reminders` periodicamente
+- [x] Promemoria automatici: cron attivo ogni 5 minuti su `task-reminders`; webhook Telegram registrato
