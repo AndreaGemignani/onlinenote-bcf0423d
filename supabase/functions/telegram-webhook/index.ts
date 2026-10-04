@@ -8,13 +8,14 @@ function safeEqual(a: string | null, b: string): boolean {
   return diff === 0;
 }
 
-function todayIn(tz: string) {
+function todayIn(tz: string, offsetDays = 0) {
+  const d = new Date(Date.now() + offsetDays * 86400000);
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: tz,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(new Date());
+  }).format(d);
 }
 
 function labelFor(date: string) {
@@ -28,6 +29,56 @@ function labelFor(date: string) {
 
 const YES = /^(s[iì]+|yes|y|ok|fatto|completata|completato|done|✅|👍)$/i;
 const NO = /^(no|n|nope|non ancora|not yet|❌|👎)$/i;
+const DEL = /^(elimina|cancella|delete|rimuovi|🗑️?)$/i;
+const SNOOZE_MS = 10 * 60 * 1000;
+
+const HELP =
+  "📝 <b>Comandi</b>\n\n" +
+  "/promemoria [oggi|domani|GG/MM|AAAA-MM-GG] [HH:MM] testo\n" +
+  "  es. <code>/promemoria 15:30 Comprare il pane</code>\n" +
+  "  es. <code>/promemoria domani 9:00 Chiamare Marco</code>\n" +
+  "/oggi — riepilogo delle attività di oggi\n\n" +
+  "Ai promemoria rispondi con i pulsanti o scrivendo «sì», «no» o «elimina».";
+
+type Parsed = { date: string; time: string | null; title: string } | { error: string };
+
+function parseReminder(raw: string, tz: string): Parsed {
+  const tokens = raw.trim().split(/\s+/).filter(Boolean);
+  let date = todayIn(tz);
+  let time: string | null = null;
+  const rest: string[] = [];
+  const year = Number(todayIn(tz).slice(0, 4));
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    const low = t.toLowerCase();
+    if (rest.length === 0 || i === tokens.length - 1 || /^(alle|ore)$/i.test(tokens[i - 1] ?? "")) {
+      // date/time tokens may appear at start, or after "alle"/"ore"
+    }
+    if (low === "oggi") { date = todayIn(tz); continue; }
+    if (low === "domani") { date = todayIn(tz, 1); continue; }
+    if (low === "dopodomani") { date = todayIn(tz, 2); continue; }
+    let m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) { date = `${m[1]}-${m[2]}-${m[3]}`; continue; }
+    m = t.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+    if (m) {
+      const y = m[3] ? (m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3])) : year;
+      date = `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+      continue;
+    }
+    m = t.match(/^(\d{1,2})[:.](\d{2})$/);
+    if (m && Number(m[1]) < 24 && Number(m[2]) < 60) {
+      time = `${m[1].padStart(2, "0")}:${m[2]}`;
+      if (/^(alle|ore)$/i.test(rest[rest.length - 1] ?? "")) rest.pop();
+      continue;
+    }
+    rest.push(t);
+  }
+  const title = rest.join(" ").trim();
+  if (!title) return { error: "Scrivi anche il testo del promemoria." };
+  if (title.length > 300) return { error: "Testo troppo lungo (max 300 caratteri)." };
+  if (isNaN(new Date(`${date}T12:00:00Z`).getTime())) return { error: "Data non valida." };
+  return { date, time, title };
+}
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
@@ -46,15 +97,70 @@ Deno.serve(async (req) => {
     headers: { "Content-Type": "application/json" },
   });
 
+  const stripButtons = (chatId: number, messageId?: number | null) =>
+    messageId
+      ? tg("editMessageReplyMarkup", {
+          chat_id: chatId,
+          message_id: messageId,
+          reply_markup: { inline_keyboard: [] },
+        }).catch(() => {})
+      : Promise.resolve();
+
+  // Apply an answer to a task; returns confirmation text or null if not found.
+  async function applyAnswer(
+    taskId: string,
+    ownerId: string,
+    chatId: number,
+    verb: "done" | "todo" | "del",
+  ): Promise<string | null> {
+    const { data: task } = await supabase
+      .from("daily_tasks")
+      .select("id, title")
+      .eq("id", taskId)
+      .eq("owner_id", ownerId)
+      .maybeSingle();
+    if (!task) return null;
+
+    // close all open prompts for this task and remove their buttons
+    const { data: prompts } = await supabase
+      .from("telegram_prompts")
+      .select("id, message_id")
+      .eq("task_id", taskId)
+      .eq("answered", false);
+    for (const p of prompts ?? []) await stripButtons(chatId, p.message_id);
+    await supabase.from("telegram_prompts").update({ answered: true }).eq("task_id", taskId);
+
+    const title = escapeHtml(task.title);
+    if (verb === "del") {
+      await supabase.from("daily_tasks").delete().eq("id", taskId);
+      return `🗑️ <b>${title}</b> eliminata.`;
+    }
+    if (verb === "done") {
+      await supabase
+        .from("daily_tasks")
+        .update({ completed: true, completed_at: new Date().toISOString(), snoozed_until: null })
+        .eq("id", taskId);
+      return `✅ <b>${title}</b> segnata come completata.`;
+    }
+    await supabase
+      .from("daily_tasks")
+      .update({
+        completed: false,
+        completed_at: null,
+        snoozed_until: new Date(Date.now() + SNOOZE_MS).toISOString(),
+      })
+      .eq("id", taskId);
+    return `❌ <b>${title}</b> resta da completare. Te la ricordo tra 10 minuti ⏳`;
+  }
+
   try {
     const update = await req.json();
     if (typeof update?.update_id !== "number") return ok();
 
-    // idempotency
     const { error: dupErr } = await supabase
       .from("telegram_updates")
       .insert({ update_id: update.update_id });
-    if (dupErr) return ok(); // already processed
+    if (dupErr) return ok();
 
     const cb = update.callback_query;
     const msg = update.message ?? update.edited_message;
@@ -62,48 +168,22 @@ Deno.serve(async (req) => {
     // ---- inline button answers -------------------------------------------
     if (cb) {
       const chatId = cb.message?.chat?.id;
-      const data = String(cb.data ?? "");
-      const [verb, taskId] = data.split(":");
-      if (chatId && taskId && (verb === "done" || verb === "todo")) {
-        const completed = verb === "done";
-        const { data: task } = await supabase
-          .from("daily_tasks")
-          .select("id, title, owner_id")
-          .eq("id", taskId)
+      const [verb, taskId] = String(cb.data ?? "").split(":");
+      // Always remove the buttons from the pressed message
+      if (chatId) await stripButtons(chatId, cb.message?.message_id);
+      if (chatId && taskId && (verb === "done" || verb === "todo" || verb === "del")) {
+        const { data: owner } = await supabase
+          .from("task_owners")
+          .select("id")
+          .eq("telegram_chat_id", chatId)
           .maybeSingle();
-        const { data: owner } = task
-          ? await supabase
-              .from("task_owners")
-              .select("id, telegram_chat_id")
-              .eq("id", task.owner_id)
-              .maybeSingle()
-          : { data: null };
-        if (task && owner && Number(owner.telegram_chat_id) === Number(chatId)) {
-          await supabase
-            .from("daily_tasks")
-            .update({
-              completed,
-              completed_at: completed ? new Date().toISOString() : null,
-            })
-            .eq("id", taskId);
-          await supabase
-            .from("telegram_prompts")
-            .update({ answered: true })
-            .eq("task_id", taskId)
-            .eq("chat_id", chatId);
-          await tg("answerCallbackQuery", {
-            callback_query_id: cb.id,
-            text: completed ? "Segnata come completata" : "Resta da fare",
-          });
-          await tg("sendMessage", {
-            chat_id: chatId,
-            text: completed
-              ? `✅ <b>${escapeHtml(task.title)}</b> segnata come completata.`
-              : `❌ <b>${escapeHtml(task.title)}</b> resta da completare.`,
-            parse_mode: "HTML",
-          });
-          return ok();
-        }
+        const reply = owner ? await applyAnswer(taskId, owner.id, chatId, verb) : null;
+        await tg("answerCallbackQuery", {
+          callback_query_id: cb.id,
+          text: reply ? "Fatto" : "Promemoria non più disponibile",
+        });
+        if (reply) await tg("sendMessage", { chat_id: chatId, text: reply, parse_mode: "HTML" });
+        return ok();
       }
       await tg("answerCallbackQuery", { callback_query_id: cb.id });
       return ok();
@@ -125,15 +205,11 @@ Deno.serve(async (req) => {
         if (owner) {
           await supabase
             .from("task_owners")
-            .update({
-              telegram_chat_id: chatId,
-              telegram_username: msg?.from?.username ?? null,
-            })
+            .update({ telegram_chat_id: chatId, telegram_username: msg?.from?.username ?? null })
             .eq("id", owner.id);
           await tg("sendMessage", {
             chat_id: chatId,
-            text:
-              "🔗 <b>Collegamento riuscito!</b>\n\nDa ora riceverai qui il riepilogo delle tue attività e i promemoria alla scadenza.\n\nScrivi /oggi per il riepilogo di oggi.",
+            text: "🔗 <b>Collegamento riuscito!</b>\n\n" + HELP,
             parse_mode: "HTML",
           });
           return ok();
@@ -141,8 +217,7 @@ Deno.serve(async (req) => {
       }
       await tg("sendMessage", {
         chat_id: chatId,
-        text:
-          "👋 Ciao! Per collegarti, apri le tue attività nell'app e premi <b>Collega Telegram</b>.",
+        text: "👋 Ciao! Per collegarti, apri le tue attività nell'app e premi <b>Collega Telegram</b>.",
         parse_mode: "HTML",
       });
       return ok();
@@ -161,10 +236,45 @@ Deno.serve(async (req) => {
       });
       return ok();
     }
+    const tz = owner.timezone ?? "Europe/Rome";
+
+    // ---- /promemoria ------------------------------------------------------
+    const addMatch = text.match(/^\/(promemoria|task|nuovo|add|reminder)(?:@\w+)?(?:\s+([\s\S]*))?$/i);
+    if (addMatch) {
+      const args = (addMatch[2] ?? "").trim();
+      if (!args) {
+        await tg("sendMessage", { chat_id: chatId, text: HELP, parse_mode: "HTML" });
+        return ok();
+      }
+      const parsed = parseReminder(args, tz);
+      if ("error" in parsed) {
+        await tg("sendMessage", { chat_id: chatId, text: `⚠️ ${parsed.error}\n\n${HELP}`, parse_mode: "HTML" });
+        return ok();
+      }
+      const { error } = await supabase.from("daily_tasks").insert({
+        owner_id: owner.id,
+        task_date: parsed.date,
+        title: parsed.title,
+        due_time: parsed.time,
+      });
+      if (error) {
+        console.error("insert task failed", error);
+        await tg("sendMessage", { chat_id: chatId, text: "⚠️ Non sono riuscito a salvare il promemoria, riprova." });
+        return ok();
+      }
+      await tg("sendMessage", {
+        chat_id: chatId,
+        text:
+          `📌 Promemoria aggiunto\n\n<b>${escapeHtml(parsed.title)}</b>\n🗓️ ${escapeHtml(labelFor(parsed.date))}` +
+          (parsed.time ? `\n⏰ ore ${parsed.time} — ti scrivo a quell'ora` : "\n(senza orario: nessun avviso automatico)"),
+        parse_mode: "HTML",
+      });
+      return ok();
+    }
 
     // ---- /oggi ------------------------------------------------------------
     if (/^\/(oggi|today|recap)/i.test(text)) {
-      const date = todayIn(owner.timezone ?? "Europe/Rome");
+      const date = todayIn(tz);
       const { data: tasks } = await supabase
         .from("daily_tasks")
         .select("id, title, due_time, completed")
@@ -180,10 +290,9 @@ Deno.serve(async (req) => {
       return ok();
     }
 
-    // ---- plain yes / no reply to last prompt -------------------------------
-    const isYes = YES.test(text);
-    const isNo = NO.test(text);
-    if (isYes || isNo) {
+    // ---- plain yes / no / delete reply to last prompt ---------------------
+    const verb = YES.test(text) ? "done" : NO.test(text) ? "todo" : DEL.test(text) ? "del" : null;
+    if (verb) {
       const { data: prompt } = await supabase
         .from("telegram_prompts")
         .select("id, task_id")
@@ -192,43 +301,19 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (!prompt) {
-        await tg("sendMessage", {
-          chat_id: chatId,
-          text: "Non ho promemoria in sospeso a cui riferire questa risposta.",
-        });
-        return ok();
-      }
-      const { data: task } = await supabase
-        .from("daily_tasks")
-        .update({
-          completed: isYes,
-          completed_at: isYes ? new Date().toISOString() : null,
-        })
-        .eq("id", prompt.task_id)
-        .eq("owner_id", owner.id)
-        .select("title")
-        .maybeSingle();
-      await supabase.from("telegram_prompts").update({ answered: true }).eq("id", prompt.id);
+      const reply = prompt ? await applyAnswer(prompt.task_id, owner.id, chatId, verb) : null;
       await tg("sendMessage", {
         chat_id: chatId,
-        text: isYes
-          ? `✅ Ottimo! <b>${escapeHtml(task?.title ?? "")}</b> è segnata come completata.`
-          : `❌ Ok, <b>${escapeHtml(task?.title ?? "")}</b> resta da completare.`,
+        text: reply ?? "Non ho promemoria in sospeso a cui riferire questa risposta.",
         parse_mode: "HTML",
       });
       return ok();
     }
 
-    await tg("sendMessage", {
-      chat_id: chatId,
-      text: "Comandi disponibili:\n/oggi — riepilogo delle attività di oggi\nRispondi «sì» o «no» ai promemoria per aggiornare un'attività.",
-    });
+    await tg("sendMessage", { chat_id: chatId, text: HELP, parse_mode: "HTML" });
     return ok();
   } catch (e) {
     console.error("telegram-webhook error", e);
-    return new Response(JSON.stringify({ ok: true }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    return ok();
   }
 });

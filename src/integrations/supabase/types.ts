@@ -24,6 +24,7 @@ export type Database = {
           owner_id: string
           position: number
           reminded_at: string | null
+          snoozed_until: string | null
           task_date: string
           title: string
           updated_at: string
@@ -37,6 +38,7 @@ export type Database = {
           owner_id: string
           position?: number
           reminded_at?: string | null
+          snoozed_until?: string | null
           task_date: string
           title: string
           updated_at?: string
@@ -50,6 +52,7 @@ export type Database = {
           owner_id?: string
           position?: number
           reminded_at?: string | null
+          snoozed_until?: string | null
           task_date?: string
           title?: string
           updated_at?: string
@@ -97,6 +100,7 @@ export type Database = {
           chat_id: number
           created_at: string
           id: string
+          message_id: number | null
           task_id: string
         }
         Insert: {
@@ -104,6 +108,7 @@ export type Database = {
           chat_id: number
           created_at?: string
           id?: string
+          message_id?: number | null
           task_id: string
         }
         Update: {
@@ -111,6 +116,7 @@ export type Database = {
           chat_id?: number
           created_at?: string
           id?: string
+          message_id?: number | null
           task_id?: string
         }
         Relationships: [

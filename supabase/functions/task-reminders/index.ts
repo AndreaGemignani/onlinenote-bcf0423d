@@ -53,22 +53,40 @@ Deno.serve(async (req) => {
       const tz = owner.timezone ?? "Europe/Rome";
       const { date, time } = localParts(tz);
 
+      const nowIso = new Date().toISOString();
       const { data: tasks } = await supabase
         .from("daily_tasks")
         .select("id, title, due_time")
         .eq("owner_id", owner.id)
         .eq("task_date", date)
         .eq("completed", false)
-        .is("reminded_at", null)
         .not("due_time", "is", null)
-        .lte("due_time", `${time}:59`);
+        .lte("due_time", `${time}:59`)
+        .or(`reminded_at.is.null,snoozed_until.lte.${nowIso}`);
 
       for (const task of tasks ?? []) {
         try {
-          await tg("sendMessage", {
+          // Close any older open prompt for this task (remove its buttons)
+          const { data: oldPrompts } = await supabase
+            .from("telegram_prompts")
+            .select("id, message_id")
+            .eq("task_id", task.id)
+            .eq("answered", false);
+          for (const p of oldPrompts ?? []) {
+            if (p.message_id) {
+              await tg("editMessageReplyMarkup", {
+                chat_id: owner.telegram_chat_id,
+                message_id: p.message_id,
+                reply_markup: { inline_keyboard: [] },
+              }).catch(() => {});
+            }
+            await supabase.from("telegram_prompts").update({ answered: true }).eq("id", p.id);
+          }
+
+          const sentMsg = await tg<{ message_id: number }>("sendMessage", {
             chat_id: owner.telegram_chat_id,
             text:
-              `⏰ <b>Scadenza attività</b>\n\n<b>${escapeHtml(task.title)}</b>` +
+              `⏰ <b>Promemoria</b>\n\n<b>${escapeHtml(task.title)}</b>` +
               (task.due_time ? ` — ore ${task.due_time.slice(0, 5)}` : "") +
               `\n\nL'hai completata?`,
             parse_mode: "HTML",
@@ -76,16 +94,19 @@ Deno.serve(async (req) => {
               inline_keyboard: [[
                 { text: "✅ Sì", callback_data: `done:${task.id}` },
                 { text: "❌ No", callback_data: `todo:${task.id}` },
+                { text: "🗑️ Elimina", callback_data: `del:${task.id}` },
               ]],
             },
           });
           await supabase
             .from("daily_tasks")
-            .update({ reminded_at: new Date().toISOString() })
+            .update({ reminded_at: new Date().toISOString(), snoozed_until: null })
             .eq("id", task.id);
-          await supabase
-            .from("telegram_prompts")
-            .insert({ chat_id: owner.telegram_chat_id, task_id: task.id });
+          await supabase.from("telegram_prompts").insert({
+            chat_id: owner.telegram_chat_id,
+            task_id: task.id,
+            message_id: sentMsg?.message_id ?? null,
+          });
           sent++;
         } catch (e) {
           console.error("reminder send failed", task.id, e);

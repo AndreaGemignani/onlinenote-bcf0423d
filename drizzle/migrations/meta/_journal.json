@@ -15,6 +15,13 @@
       "when": 1790340926225,
       "tag": "0001_enable_cron_extensions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791107905059,
+      "tag": "0002_add_task_snooze",
+      "breakpoints": true
     }
   ]
 }
