@@ -38,7 +38,47 @@ const HELP =
   "  es. <code>/promemoria 15:30 Comprare il pane</code>\n" +
   "  es. <code>/promemoria domani 9:00 Chiamare Marco</code>\n" +
   "/oggi — riepilogo delle attività di oggi\n\n" +
-  "Ai promemoria rispondi con i pulsanti o scrivendo «sì», «no» o «elimina».";
+  "Ai promemoria rispondi con i pulsanti o scrivendo «sì», «no» o «elimina».\n" +
+  "Per rimandare: «ricordamelo tra 20 minuti», «tra 1 ora» o «alle 18:30».";
+
+function zonedToUtc(date: string, time: string, tz: string): Date {
+  const guess = new Date(`${date}T${time}:00Z`);
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    }).formatToParts(guess).map((x) => [x.type, x.value]),
+  );
+  const asLocal = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
+  return new Date(guess.getTime() - (asLocal - guess.getTime()));
+}
+
+type Snooze = { until: Date } | { error: string } | null;
+
+function parseSnooze(raw: string, tz: string): Snooze {
+  const t = raw.toLowerCase().replace(/^\/(snooze|rimanda|ricorda)(@\w+)?\s*/, "").trim();
+  const isSnooze = /^(ricordamelo|ricordami|rimanda|rimandalo|posticipa|tra|fra|alle|ore|\d)/.test(t) ||
+    /^\/(snooze|rimanda|ricorda)/i.test(raw);
+  if (!isSnooze) return null;
+  let m = t.match(/(?:tra|fra)\s+(\d{1,4}|un|una|mezz)\s*('?ora|ore|h|minuti|minuto|min|m)?/);
+  if (m) {
+    const n = m[1] === "un" || m[1] === "una" ? 1 : m[1] === "mezz" ? 30 : Number(m[1]);
+    const unit = m[2] ?? (m[1] === "mezz" ? "min" : "min");
+    const mins = m[1] === "mezz" ? 30 : /ora|ore|h/.test(unit) ? n * 60 : n;
+    if (!mins || mins > 7 * 24 * 60) return { error: "Durata non valida." };
+    return { until: new Date(Date.now() + mins * 60000) };
+  }
+  m = t.match(/(?:alle|ore)?\s*(\d{1,2})(?:[:.](\d{2}))?\s*$/);
+  if (m && /alle|ore|[:.]/.test(t)) {
+    const h = Number(m[1]), mi = Number(m[2] ?? 0);
+    if (h > 23 || mi > 59) return { error: "Orario non valido." };
+    const hhmm = `${String(h).padStart(2, "0")}:${String(mi).padStart(2, "0")}`;
+    let until = zonedToUtc(todayIn(tz), hhmm, tz);
+    if (until.getTime() <= Date.now()) until = zonedToUtc(todayIn(tz, 1), hhmm, tz);
+    return { until };
+  }
+  return null;
+}
 
 type Parsed = { date: string; time: string | null; title: string } | { error: string };
 
@@ -287,6 +327,62 @@ Deno.serve(async (req) => {
         text: formatRecap(labelFor(date), tasks ?? []),
         parse_mode: "HTML",
       });
+      return ok();
+    }
+
+    // ---- "ricordamelo tra X minuti" / "alle HH:MM" ------------------------
+    const snooze = parseSnooze(text, tz);
+    if (snooze) {
+      let taskId: string | null = null;
+      const { data: prompt } = await supabase
+        .from("telegram_prompts")
+        .select("task_id")
+        .eq("chat_id", chatId)
+        .eq("answered", false)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      taskId = prompt?.task_id ?? null;
+      if (!taskId) {
+        const { data: last } = await supabase
+          .from("daily_tasks")
+          .select("id")
+          .eq("owner_id", owner.id)
+          .eq("completed", false)
+          .not("reminded_at", "is", null)
+          .order("reminded_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        taskId = last?.id ?? null;
+      }
+      let reply = "Non ho promemoria a cui riferire questa richiesta.";
+      if ("error" in snooze) reply = `⚠️ ${snooze.error}`;
+      else if (taskId) {
+        const { data: task } = await supabase
+          .from("daily_tasks")
+          .select("id, title")
+          .eq("id", taskId)
+          .eq("owner_id", owner.id)
+          .maybeSingle();
+        if (task) {
+          const { data: prompts } = await supabase
+            .from("telegram_prompts")
+            .select("id, message_id")
+            .eq("task_id", taskId)
+            .eq("answered", false);
+          for (const p of prompts ?? []) await stripButtons(chatId, p.message_id);
+          await supabase.from("telegram_prompts").update({ answered: true }).eq("task_id", taskId);
+          await supabase
+            .from("daily_tasks")
+            .update({ completed: false, completed_at: null, snoozed_until: snooze.until.toISOString() })
+            .eq("id", taskId);
+          const hhmm = new Intl.DateTimeFormat("it-IT", {
+            timeZone: tz, hour: "2-digit", minute: "2-digit",
+          }).format(snooze.until);
+          reply = `⏰ Ok! Ti ricordo <b>${escapeHtml(task.title)}</b> alle ${hhmm}.`;
+        }
+      }
+      await tg("sendMessage", { chat_id: chatId, text: reply, parse_mode: "HTML" });
       return ok();
     }
 
