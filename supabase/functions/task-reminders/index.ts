@@ -53,16 +53,28 @@ Deno.serve(async (req) => {
       const tz = owner.timezone ?? "Europe/Rome";
       const { date, time } = localParts(tz);
 
-      const nowIso = new Date().toISOString();
-      const { data: tasks } = await supabase
+      // 30s tolerance so a snooze ending at hh:mm:20 fires at the hh:mm run
+      const nowIso = new Date(Date.now() + 30_000).toISOString();
+      const { data: dueTasks } = await supabase
         .from("daily_tasks")
         .select("id, title, due_time")
         .eq("owner_id", owner.id)
         .eq("task_date", date)
         .eq("completed", false)
+        .is("reminded_at", null)
         .not("due_time", "is", null)
-        .lte("due_time", `${time}:59`)
-        .or(`reminded_at.is.null,snoozed_until.lte.${nowIso}`);
+        .lte("due_time", `${time}:59`);
+      const { data: snoozed } = await supabase
+        .from("daily_tasks")
+        .select("id, title, due_time")
+        .eq("owner_id", owner.id)
+        .eq("completed", false)
+        .not("snoozed_until", "is", null)
+        .lte("snoozed_until", nowIso);
+      const seen = new Set<string>();
+      const tasks = [...(dueTasks ?? []), ...(snoozed ?? [])].filter((t) =>
+        seen.has(t.id) ? false : (seen.add(t.id), true)
+      );
 
       for (const task of tasks ?? []) {
         try {
