@@ -37,7 +37,8 @@ const HELP =
   "/promemoria [oggi|domani|GG/MM|AAAA-MM-GG] [HH:MM] testo\n" +
   "  es. <code>/promemoria 15:30 Comprare il pane</code>\n" +
   "  es. <code>/promemoria domani 9:00 Chiamare Marco</code>\n" +
-  "/oggi — riepilogo delle attività di oggi\n\n" +
+  "/oggi — riepilogo delle attività di oggi\n" +
+  "/domani — impegni di domani\n\n" +
   "Ai promemoria rispondi con i pulsanti o scrivendo «sì», «no» o «elimina».\n" +
   "Per rimandare: «ricordamelo tra 20 minuti», «tra 1 ora» o «alle 18:30».";
 
@@ -312,9 +313,10 @@ Deno.serve(async (req) => {
       return ok();
     }
 
-    // ---- /oggi ------------------------------------------------------------
-    if (/^\/(oggi|today|recap)/i.test(text)) {
-      const date = todayIn(tz);
+    // ---- /oggi, /domani ---------------------------------------------------
+    const isTomorrow = /^\/(domani|tomorrow)\b/i.test(text);
+    if (isTomorrow || /^\/(oggi|today|recap)/i.test(text)) {
+      const date = todayIn(tz, isTomorrow ? 1 : 0);
       const { data: tasks } = await supabase
         .from("daily_tasks")
         .select("id, title, due_time, completed")
