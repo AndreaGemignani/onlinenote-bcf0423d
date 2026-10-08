@@ -26,12 +26,13 @@ import { cn } from "@/lib/utils";
 
 interface Props {
   editor: Editor | null;
-  onOpen: () => void;
+  onOpen?: () => void;
   onDownload: () => void;
   onClear: () => void;
+  extra?: React.ReactNode;
 }
 
-export function EditorToolbar({ editor, onOpen, onDownload, onClear }: Props) {
+export function EditorToolbar({ editor, onOpen, onDownload, onClear, extra }: Props) {
   if (!editor) return null;
 
   const btn = (active: boolean) =>
@@ -176,9 +177,12 @@ export function EditorToolbar({ editor, onOpen, onDownload, onClear }: Props) {
 
       <div className="flex-1" />
 
-      <Button variant="ghost" size="sm" className="h-8 px-2" onClick={onOpen} title="Apri file">
-        <Upload className="h-4 w-4" />
-      </Button>
+      {extra}
+      {onOpen && (
+        <Button variant="ghost" size="sm" className="h-8 px-2" onClick={onOpen} title="Apri file">
+          <Upload className="h-4 w-4" />
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="sm"

@@ -67,6 +67,39 @@ export type Database = {
           },
         ]
       }
+      shared_notes: {
+        Row: {
+          content_json: Json
+          created_at: string
+          id: string
+          owner_secret_hash: string
+          title: string
+          token_hash: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          content_json?: Json
+          created_at?: string
+          id?: string
+          owner_secret_hash: string
+          title?: string
+          token_hash: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          content_json?: Json
+          created_at?: string
+          id?: string
+          owner_secret_hash?: string
+          title?: string
+          token_hash?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       task_owners: {
         Row: {
           created_at: string
