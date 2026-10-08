@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Editor } from "@tiptap/react";
 import { NotesMenu } from "@/components/NotesMenu";
 import { Button } from "@/components/ui/button";
-import { Sun, Moon, CalendarDays } from "lucide-react";
+import { Sun, Moon, CalendarDays, Share2 } from "lucide-react";
+import { ShareDialog } from "@/components/ShareDialog";
+import { useSharedSync, applyRemoteContent, callShared, type SharedDoc } from "@/hooks/useSharedSync";
 import { TasksCalendarDialog } from "@/components/tasks/TasksCalendarDialog";
 import { useTasks } from "@/hooks/useTasks";
 import { dateKey } from "@/lib/dateKey";
@@ -62,6 +64,50 @@ const Index = () => {
     return () => clearTimeout(t);
   }, [titleDraft, activeNote, updateNote]);
 
+  // Link sharing
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareToken = activeNote?.share?.token ?? null;
+  const onRemote = useCallback(
+    (doc: SharedDoc) => {
+      if (!activeId) return;
+      applyRemoteContent(editor, doc.content);
+      setTitleDraft(doc.title);
+      updateNote(activeId, {
+        title: doc.title,
+        contentJSON: doc.content,
+        preview: (editor?.getText() ?? "").slice(0, 120),
+      });
+    },
+    [activeId, editor, updateNote]
+  );
+  const { status: shareStatus, markDirty } = useSharedSync({
+    token: shareToken,
+    editor,
+    title: titleDraft,
+    onRemote,
+  });
+
+  const createShare = useCallback(async () => {
+    if (!activeNote || !editor) return;
+    const res = await callShared<{ token: string; ownerSecret: string }>({
+      action: "create",
+      title: titleDraft,
+      content: editor.getJSON(),
+    });
+    updateNote(activeNote.id, { share: { token: res.token, ownerSecret: res.ownerSecret } });
+  }, [activeNote, editor, titleDraft, updateNote]);
+
+  const revokeShare = useCallback(async () => {
+    if (!activeNote?.share) return;
+    try {
+      await callShared({ action: "revoke", ...activeNote.share });
+    } catch (e) {
+      if (!String(e).includes("non trovata")) throw e;
+    }
+    updateNote(activeNote.id, { share: undefined });
+    toast({ title: "Condivisione disattivata", description: "La nota è di nuovo solo locale" });
+  }, [activeNote, updateNote]);
+
   const handleEditorChange = useCallback(
     (json: unknown, html: string, text: string) => {
       if (!activeId) return;
@@ -70,8 +116,9 @@ const Index = () => {
         contentJSON: json,
         preview: text.slice(0, 120),
       });
+      markDirty();
     },
-    [activeId, updateNote]
+    [activeId, updateNote, markDirty]
   );
 
   const handleDownload = useCallback(() => {
@@ -173,6 +220,17 @@ const Index = () => {
                 onOpen={handleOpen}
                 onDownload={handleDownload}
                 onClear={handleClear}
+                extra={
+                  <Button
+                    variant={shareToken ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => setShareOpen(true)}
+                    title="Condividi tramite link"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                }
               />
             )}
           </div>
@@ -197,7 +255,9 @@ const Index = () => {
               />
             )}
             <p className="text-center text-xs text-muted-foreground mt-6">
-              🔒 Tutte le note sono salvate localmente sul tuo dispositivo
+              {shareToken
+                ? `🔗 Nota condivisa tramite link · ${shareStatus === "saving" ? "Salvataggio…" : shareStatus === "error" ? "Errore di connessione" : shareStatus === "missing" ? "Link disattivato" : "Sincronizzata"}`
+                : "🔒 Questa nota è salvata solo sul tuo dispositivo"}
             </p>
           </div>
         </main>
@@ -209,6 +269,14 @@ const Index = () => {
         accept=".html,.json"
         onChange={handleFileChange}
         className="hidden"
+      />
+
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        shareToken={shareToken}
+        onCreate={createShare}
+        onRevoke={revokeShare}
       />
 
       <TasksCalendarDialog
