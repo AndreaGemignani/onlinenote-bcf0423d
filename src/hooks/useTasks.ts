@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { extBackend as supabase } from "@/lib/extBackend";
 import type { DailyTask, TaskOwnerInfo } from "@/types/task";
 import { monthRange } from "@/lib/dateKey";
 
