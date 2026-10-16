@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
-import { supabase } from "@/integrations/supabase/client";
+import { extBackend as supabase } from "@/lib/extBackend";
 
 export async function callShared<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke("shared-notes", { body });

@@ -1,0 +1,1 @@
+- Tasks, Telegram bot and shared notes run on an external free Supabase project (src/lib/extBackend.ts); deploy their edge functions there via the Management API with EXT_SUPABASE_ACCESS_TOKEN — why: avoids Lovable Cloud run credits.
