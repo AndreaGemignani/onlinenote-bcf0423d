@@ -97,6 +97,33 @@ const Index = () => {
     updateNote(activeNote.id, { share: { token: res.token, ownerSecret: res.ownerSecret } });
   }, [activeNote, editor, titleDraft, updateNote]);
 
+  // Snapshot copy link: a separate online copy nobody edits; recipients import it locally
+  const createCopyLink = useCallback(async () => {
+    if (!editor) throw new Error("Editor non pronto");
+    const res = await callShared<{ token: string }>({
+      action: "create",
+      title: titleDraft,
+      content: editor.getJSON(),
+    });
+    return res.token;
+  }, [editor, titleDraft]);
+
+  // Import a copy when opened via /?copy=<token>
+  const importedCopy = useRef(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("copy");
+    if (!token || importedCopy.current) return;
+    importedCopy.current = true;
+    window.history.replaceState(null, "", window.location.pathname);
+    callShared<SharedDoc>({ action: "get", token })
+      .then((doc) => {
+        createNote({ title: doc.title, contentJSON: doc.content, preview: "" });
+        toast({ title: "Copia aggiunta alle tue note", description: "Le tue modifiche restano solo su questo dispositivo" });
+      })
+      .catch(() => toast({ title: "Copia non disponibile", description: "Il link non è valido", variant: "destructive" }));
+  }, [createNote]);
+
   const revokeShare = useCallback(async () => {
     if (!activeNote?.share) return;
     try {
@@ -277,6 +304,7 @@ const Index = () => {
         shareToken={shareToken}
         onCreate={createShare}
         onRevoke={revokeShare}
+        onCreateCopy={createCopyLink}
       />
 
       <TasksCalendarDialog

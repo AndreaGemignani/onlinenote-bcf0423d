@@ -52,6 +52,9 @@ const SharedNote = () => {
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={toggle}>
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
+          <Button asChild variant="outline" size="sm" className="h-8 px-2 text-xs">
+            <a href={`/?copy=${token}`} title="Salva una copia privata nelle tue note">Copia nelle mie note</a>
+          </Button>
           <div className="w-px h-5 bg-border mx-1" />
           {editor && (
             <EditorToolbar
