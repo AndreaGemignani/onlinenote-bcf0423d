@@ -15,7 +15,20 @@ import {
   Redo2,
   Heading1,
   Heading2,
+  CheckSquare,
+  Square,
 } from "lucide-react";
+
+/** Sets every checklist item in the document to checked/unchecked in one undoable step. */
+export function setAllChecks(editor: Editor, checked: boolean) {
+  const { tr, doc } = editor.state;
+  doc.descendants((node, pos) => {
+    if (node.type.name === "taskItem" && node.attrs.checked !== checked) {
+      tr.setNodeMarkup(pos, undefined, { ...node.attrs, checked });
+    }
+  });
+  if (tr.docChanged) editor.view.dispatch(tr);
+}
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -171,6 +184,14 @@ export function EditorToolbar({ editor, onOpen, onDownload, onClear, extra }: Pr
           >
             <ListChecks className="h-4 w-4 mr-2" />
             Checklist
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setAllChecks(editor, true)}>
+            <CheckSquare className="h-4 w-4 mr-2" />
+            Spunta tutte
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setAllChecks(editor, false)}>
+            <Square className="h-4 w-4 mr-2" />
+            Togli tutte le spunte
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
